@@ -11,6 +11,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def get_msk_time():
     return datetime.utcnow() + timedelta(hours=3)
 
+# Эта функция должна быть определена ДО использования
 async def broadcast(message: str):
     for conn in active_connections.values():
         try: await conn.send_text(message)
@@ -20,8 +21,6 @@ async def broadcast(message: str):
 async def startup():
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL)
     async with app.state.db_pool.acquire() as connection:
-        # УДАЛЯЕМ СТАРУЮ ТАБЛИЦУ, ЧТОБЫ УБРАТЬ КРИВЫЕ ДАННЫЕ
-        await connection.execute('DROP TABLE IF EXISTS messages;')
         await connection.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -30,10 +29,6 @@ async def startup():
                 timestamp TEXT NOT NULL
             )
         ''')
-
-@app.on_event("shutdown")
-async def shutdown():
-    await app.state.db_pool.close()
 
 @app.get("/")
 async def get():
@@ -45,11 +40,9 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Загружаем сообщения
     async with app.state.db_pool.acquire() as connection:
         rows = await connection.fetch('SELECT sender, text, timestamp FROM messages ORDER BY id ASC LIMIT 50')
         for row in rows:
-            # Отправляем в строгом формате sender:timestamp:text
             await websocket.send_text(f"{row['sender']}:{row['timestamp']}:{row['text']}")
 
     await broadcast(f"📢 СИСТЕМА:{get_msk_time().strftime('%H:%M')}:Пользователь {username} зашел")
