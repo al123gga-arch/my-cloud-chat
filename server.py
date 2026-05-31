@@ -5,31 +5,16 @@ from fastapi.responses import HTMLResponse
 import asyncpg
 
 app = FastAPI()
-
-# Список активных подключений
 active_connections = {}
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Функция получения времени по МСК
 def get_msk_time():
     return datetime.utcnow() + timedelta(hours=3)
-
-async def broadcast(message: str):
-    for connection in list(active_connections.values()):
-        try:
-            await connection.send_text(message)
-        except:
-            pass
 
 @app.on_event("startup")
 async def startup():
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL)
     async with app.state.db_pool.acquire() as connection:
-        # ХАК: Принудительно сносим старую ломающую таблицу при старте сервера
-        await connection.execute('DROP TABLE IF EXISTS messages;')
-        
-        # Создаем чистую правильную таблицу, готовую к смайликам и времени
         await connection.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -53,34 +38,25 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Загружаем последние сохраненные сообщения
     async with app.state.db_pool.acquire() as connection:
-        rows = await connection.fetch('''
-            SELECT sender, text, timestamp FROM messages 
-            ORDER BY id ASC LIMIT 50
-        ''')
+        rows = await connection.fetch('SELECT sender, text, timestamp FROM messages ORDER BY id ASC LIMIT 50')
         for row in rows:
             await websocket.send_text(f"{row['sender']}:{row['timestamp']}:{row['text']}")
 
-    current_time = get_msk_time().strftime("%H:%M")
-    await broadcast(f"📢 СИСТЕМА:{current_time}:{username} присоединился к чату")
+    await broadcast(f"📢 СИСТЕМА:{get_msk_time().strftime('%H:%M')}:{username} в сети")
 
     try:
         while True:
             data = await websocket.receive_text()
             msg_time = get_msk_time().strftime("%H:%M")
-            
-            # Сохраняем в базу текст и время строкой
             async with app.state.db_pool.acquire() as connection:
-                await connection.execute(
-                    'INSERT INTO messages (sender, text, timestamp) VALUES ($1, $2, $3)', 
-                    username, data, msg_time
-                )
-            
+                await connection.execute('INSERT INTO messages (sender, text, timestamp) VALUES ($1, $2, $3)', username, data, msg_time)
             await broadcast(f"{username}:{msg_time}:{data}")
-            
     except WebSocketDisconnect:
-        if username in active_connections:
-            del active_connections[username]
-        current_time = get_msk_time().strftime("%H:%M")
-        await broadcast(f"❌ СИСТЕМА:{current_time}:{username} покинул чат")
+        del active_connections[username]
+        await broadcast(f"❌ СИСТЕМА:{get_msk_time().strftime('%H:%M')}:{username} вышел")
+
+async def broadcast(message: str):
+    for conn in active_connections.values():
+        try: await conn.send_text(message)
+        except: pass
