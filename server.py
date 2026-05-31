@@ -4,24 +4,19 @@ from fastapi.responses import HTMLResponse
 import asyncpg
 
 app = FastAPI()
-active_connections = {} # Словарь {username: websocket}
+active_connections = {}
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 @app.on_event("startup")
 async def startup():
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL)
     async with app.state.db_pool.acquire() as conn:
-        # Полный сброс для чистоты
+        # УДАЛЯЕМ ВСЁ СТАРОЕ, чтобы дизайн обновился корректно
         await conn.execute('DROP TABLE IF EXISTS messages;')
         await conn.execute('CREATE TABLE messages (id SERIAL PRIMARY KEY, sender TEXT, text TEXT)')
 
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
-    # Защита от дублей
-    if username in active_connections:
-        await websocket.close(code=1008) # Policy Violation
-        return
-
     await websocket.accept()
     active_connections[username] = websocket
     
@@ -31,7 +26,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         for row in rows:
             await websocket.send_text(f"{row['sender']}:{row['text']}")
 
-    await broadcast(f"СИСТЕМА:Пользователь {username} зашел")
+    await broadcast(f"СИСТЕМА:Пользователь {username} вошел")
 
     try:
         while True:
@@ -45,7 +40,8 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
 
 async def broadcast(message: str):
     for conn in active_connections.values():
-        await conn.send_text(message)
+        try: await conn.send_text(message)
+        except: pass
 
 @app.get("/")
 async def get():
