@@ -2,87 +2,54 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Messenger Pro</title>
+    <title>Simple Chat</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
-        .container { background: #1e293b; width: 100%; max-width: 500px; height: 85vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        #auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; height: 100%; }
-        #chat-screen { display: none; flex-direction: column; height: 100%; }
-        #messages { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg-wrapper { max-width: 85%; }
-        .msg-wrapper.my { align-self: flex-end; }
-        .msg-author { font-size: 10px; color: #94a3b8; margin-bottom: 2px; display: block; }
-        .msg { padding: 8px 12px; border-radius: 12px; background: #334155; word-break: break-all; }
-        .my .msg { background: #38bdf8; color: #0f172a; }
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-        .input-area { padding: 10px; background: #0f172a; display: flex; gap: 5px; align-items: center; }
-        input[type="text"] { flex-grow: 1; padding: 10px; border-radius: 8px; border: none; background: #1e293b; color: white; }
-        .btn { padding: 10px 15px; border-radius: 8px; border: none; background: #38bdf8; color: #0f172a; cursor: pointer; font-weight: bold; }
-        #file-input { display: none; }
+        body { background: #0f172a; color: white; font-family: sans-serif; display: flex; justify-content: center; height: 100vh; margin: 0; }
+        .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; height: 100%; }
+        #messages { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .msg { background: #334155; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
+        .input-area { padding: 10px; background: #1e293b; display: flex; gap: 5px; }
+        .emojis { padding: 5px; background: #1e293b; display: flex; gap: 5px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <div id="auth-screen">
-        <input type="text" id="username" placeholder="Твой ник..." style="width: 100%; padding: 10px; margin-bottom: 10px;">
-        <button class="btn" onclick="joinChat()" style="width: 100%;">Войти</button>
-    </div>
-
-    <div id="chat-screen">
+    <div id="auth"><input type="text" id="user" placeholder="Ник"><button onclick="join()">Войти</button></div>
+    <div id="chat" style="display:none; flex-direction:column; height:100%;">
         <div id="messages"></div>
+        <div class="emojis" id="emoji-bar"></div>
         <div class="input-area">
-            <button class="btn" onclick="document.getElementById('file-input').click()">📎</button>
-            <input type="file" id="file-input" accept="image/*" onchange="sendImage(event)">
-            <input type="text" id="messageText" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">➤</button>
+            <input type="text" id="txt" placeholder="Сообщение...">
+            <button onclick="send()">➤</button>
         </div>
     </div>
 </div>
-
 <script>
     let ws;
-    let myName = "";
+    const emojis = ["😊", "😂", "🔥", "👍", "❤️", "🤔", "🎉", "😎"];
+    const bar = document.getElementById("emoji-bar");
+    emojis.forEach(e => {
+        let s = document.createElement("span");
+        s.innerText = e;
+        s.onclick = () => document.getElementById("txt").value += e;
+        bar.appendChild(s);
+    });
 
-    function joinChat() {
-        myName = document.getElementById("username").value;
-        if (!myName) return;
-        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}/ws/${encodeURIComponent(myName)}`);
-        
-        ws.onopen = () => {
-            document.getElementById("auth-screen").style.display = "none";
-            document.getElementById("chat-screen").style.display = "flex";
-        };
-
-        ws.onmessage = (event) => {
-            const data = event.data;
-            const messages = document.getElementById('messages');
-            const div = document.createElement('div');
-            
-            // Простая обработка: если сообщение начинается с data:image, показываем как картинку
-            if (data.startsWith("data:image")) {
-                div.innerHTML = `<div class="msg-wrapper"><span class="msg-author">Фото</span><img src="${data}" class="chat-img"></div>`;
-            } else {
-                div.className = 'msg-wrapper ' + (data.split(':')[0] === myName ? 'my' : '');
-                div.innerHTML = `<span class="msg-author">${data.split(':')[0]}</span><div class="msg">${data.split(':').slice(1).join(':')}</div>`;
-            }
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
+    function join() {
+        const u = document.getElementById("user").value;
+        if(!u) return;
+        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}/ws/${u}`);
+        ws.onopen = () => { document.getElementById("auth").style.display = "none"; document.getElementById("chat").style.display = "flex"; };
+        ws.onmessage = (e) => {
+            const div = document.createElement("div");
+            div.className = "msg";
+            div.innerText = e.data;
+            document.getElementById("messages").appendChild(div);
         };
     }
-
-    function sendMessage() {
-        const input = document.getElementById("messageText");
-        if (input.value) { ws.send(input.value); input.value = ''; }
-    }
-
-    function sendImage(event) {
-        const file = event.target.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => ws.send(e.target.result);
-        reader.readAsDataURL(file);
+    function send() {
+        const t = document.getElementById("txt");
+        if(t.value) { ws.send(t.value); t.value = ""; }
     }
 </script>
 </body>
