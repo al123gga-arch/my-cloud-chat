@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Мой Мессенджер</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #e6ebf0; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        #auth, #chat { max-width: 500px; width: 100%; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #chat { display: none; height: 80vh; flex-direction: column; }
+        #messages { flex-grow: 1; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 5px; background: #f9f9f9; }
+        .input-group { display: flex; gap: 10px; }
+        input { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background: #2481cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1a6baf; }
+    </style>
+</head>
+<body>
+
+    <div id="auth">
+        <h2>Вход в мессенджер</h2>
+        <div class="input-group">
+            <input type="text" id="username" placeholder="Введите ваш никнейм...">
+            <button onclick="startChat()">Войти</button>
+        </div>
+    </div>
+
+    <div id="chat">
+        <h3 id="chat-title">Чат</h3>
+        <div id="messages"></div>
+        <div class="input-group">
+            <input type="text" id="messageText" placeholder="Напишите сообщение..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Отправить</button>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let username;
+
+        function startChat() {
+            username = document.getElementById("username").value.trim();
+            if (!username) return alert("Введите ник!");
+
+            // Подключаемся к WebSocket серверу (локально)
+            ws = new WebSocket(`ws://localhost:8000/ws/${username}`);
+
+            ws.onmessage = function(event) {
+                let messages = document.getElementById('messages');
+                let message = document.createElement('div');
+                message.style.marginBottom = "8px";
+                message.textContent = event.data;
+                messages.appendChild(message);
+                messages.scrollTop = messages.scrollHeight; // Автоскролл вниз
+            };
+
+            ws.onclose = function() {
+                alert("Соединение разорвано");
+            };
+
+            document.getElementById("auth").style.display = "none";
+            document.getElementById("chat").style.display = "flex";
+            document.getElementById("chat-title").textContent = `Вы вошли как: ${username}`;
+        }
+
+        function sendMessage() {
+            let input = document.getElementById("messageText");
+            if (input.value.trim() && ws.readyState === WebSocket.OPEN) {
+                ws.send(input.value);
+                input.value = '';
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>
