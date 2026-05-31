@@ -49,4 +49,38 @@ async def get():
         return HTMLResponse(f.read())
 
 @app.websocket("/ws/{username}")
-async
+async def websocket_endpoint(websocket: WebSocket, username: str):
+    await websocket.accept()
+    active_connections[username] = websocket
+    
+    # Загружаем последние сохраненные сообщения
+    async with app.state.db_pool.acquire() as connection:
+        rows = await connection.fetch('''
+            SELECT sender, text, timestamp FROM messages 
+            ORDER BY id ASC LIMIT 50
+        ''')
+        for row in rows:
+            await websocket.send_text(f"{row['sender']}:{row['timestamp']}:{row['text']}")
+
+    current_time = get_msk_time().strftime("%H:%M")
+    await broadcast(f"📢 СИСТЕМА:{current_time}:{username} присоединился к чату")
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg_time = get_msk_time().strftime("%H:%M")
+            
+            # Сохраняем в базу текст и время строкой
+            async with app.state.db_pool.acquire() as connection:
+                await connection.execute(
+                    'INSERT INTO messages (sender, text, timestamp) VALUES ($1, $2, $3)', 
+                    username, data, msg_time
+                )
+            
+            await broadcast(f"{username}:{msg_time}:{data}")
+            
+    except WebSocketDisconnect:
+        if username in active_connections:
+            del active_connections[username]
+        current_time = get_msk_time().strftime("%H:%M")
+        await broadcast(f"❌ СИСТЕМА:{current_time}:{username} покинул чат")
