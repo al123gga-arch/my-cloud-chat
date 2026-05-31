@@ -2,22 +2,21 @@ import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import asyncpg
-import json
 
 app = FastAPI()
 
 # Список активных подключений
 active_connections = {}
 
-# СЮДА ВСТАВЬ СВОЮ ССЫЛКУ INTERNAL DATABASE URL ИЗ RENDER
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@host/database")
+# Сервер автоматически заберет ссылку из настроек Render
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Подключение к базе данных при старте сервера
 @app.on_event("startup")
 async def startup():
+    # Создаем пул подключений к базе данных
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL)
     async with app.state.db_pool.acquire() as connection:
-        # Создаем таблицу сообщений, если её нет
+        # Создаем таблицу для сообщений, если её ещё нет
         await connection.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id SERIAL PRIMARY KEY,
@@ -33,7 +32,6 @@ async def shutdown():
 
 @app.get("/")
 async def get():
-    # Возвращаем index.html, если кто-то стучится на главную
     with open("index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(f.read())
 
@@ -42,7 +40,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections[username] = websocket
     
-    # При подключении пользователя отправляем ему историю последних 50 сообщений из базы
+    # При подключении вытаскиваем историю сообщений из базы
     async with app.state.db_pool.acquire() as connection:
         rows = await connection.fetch('''
             SELECT sender, text FROM messages 
@@ -51,22 +49,19 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         for row in rows:
             await websocket.send_text(f"{row['sender']}:{row['text']}")
 
-    # Оповещаем всех о входе
     await broadcast(f"📢 {username} присоединился к чату")
 
     try:
         while True:
-            # Ждем сообщение от пользователя
             data = await websocket.receive_text()
             
-            # Сохраняем сообщение в базу данных
+            # Сохраняем новое сообщение в базу данных
             async with app.state.db_pool.acquire() as connection:
                 await connection.execute(
                     'INSERT INTO messages (sender, text) VALUES ($1, $2)', 
                     username, data
                 )
             
-            # Пересылаем сообщение всем активным пользователям
             await broadcast(f"{username}:{data}")
             
     except WebSocketDisconnect:
