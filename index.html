@@ -3,33 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Messenger</title>
+    <title>Cloud Messenger Pro</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
-        .container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 500px; height: 85vh; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4); }
+        .container { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 500px; height: 85vh; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
         #auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; flex-grow: 1; padding: 30px; text-align: center; }
-        #auth-screen h2 { font-size: 28px; margin-bottom: 10px; color: #38bdf8; font-weight: 600; }
+        #auth-screen h2 { font-size: 28px; margin-bottom: 10px; color: #38bdf8; }
         #auth-screen p { color: #94a3b8; margin-bottom: 25px; font-size: 14px; }
-        #chat-screen { display: none; flex-direction: column; height: 100%; }
+        #chat-screen { display: none; flex-direction: column; height: 100%; position: relative; }
         .chat-header { background: rgba(15, 23, 42, 0.6); padding: 15px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between; }
         .chat-header .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
         .chat-header .status::before { content: ''; display: inline-block; width: 8px; height: 8px; background-color: #4ade80; border-radius: 50%; box-shadow: 0 0 8px #4ade80; }
         #messages { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        #messages::-webkit-scrollbar { width: 6px; }
-        #messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
-        .msg { max-width: 80%; padding: 10px 16px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-break: break-word; }
-        .msg.my-msg { align-self: flex-end; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); color: white; border-bottom-right-radius: 4px; }
-        .msg.other-msg { align-self: flex-start; background: #334155; color: #f8fafc; border-bottom-left-radius: 4px; }
-        .msg-sender { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #cbd5e1; display: block; }
-        .my-msg .msg-sender { color: rgba(255, 255, 255, 0.8); }
-        .system-msg { align-self: center; background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 12px; padding: 4px 12px; border-radius: 99px; margin: 5px 0; }
-        .input-area { padding: 15px 20px; background: rgba(15, 23, 42, 0.6); display: flex; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-        input[type="text"] { flex-grow: 1; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 16px; border-radius: 14px; color: white; font-size: 15px; outline: none; }
+        #messages::-webkit-scrollbar { width: 4px; }
+        #messages::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
+        
+        /* Стили сообщений */
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; gap: 2px; }
+        .msg-wrapper.my { align-self: flex-end; }
+        .msg-wrapper.other { align-self: flex-start; }
+        .msg-author { font-size: 11px; font-weight: bold; color: #94a3b8; padding-left: 4px; }
+        .msg-wrapper.my .msg-author { align-self: flex-end; padding-right: 4px; }
+        
+        .msg { padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-break: break-word; position: relative; display: flex; flex-direction: column; gap: 4px; }
+        .msg.my-msg { background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); color: white; border-bottom-right-radius: 4px; }
+        .msg.other-msg { background: #334155; color: #f8fafc; border-bottom-left-radius: 4px; }
+        
+        .msg-time { font-size: 10px; color: rgba(255, 255, 255, 0.6); align-self: flex-end; margin-top: 2px; margin-left: 15px; }
+        .other-msg .msg-time { color: #94a3b8; }
+        
+        /* Стили для картинок и стикеров */
+        .chat-img { max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 5px; display: block; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); }
+        .sticker-img { width: 120px; height: 120px; display: block; object-fit: contain; }
+        
+        .system-msg { align-self: center; background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 11px; padding: 4px 12px; border-radius: 99px; margin: 5px 0; }
+        
+        /* Панель ввода и инструментов */
+        .input-container { background: rgba(15, 23, 42, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; }
+        .input-area { padding: 12px 15px; display: flex; gap: 8px; align-items: center; }
+        
+        .panel-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; opacity: 0.7; transition: opacity 0.2s; }
+        .panel-btn:hover { opacity: 1; }
+        
+        input[type="text"] { flex-grow: 1; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px 14px; border-radius: 14px; color: white; font-size: 15px; outline: none; }
         input[type="text"]:focus { border-color: #38bdf8; }
-        button { background: #38bdf8; color: #0f172a; border: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 15px; cursor: pointer; transition: background 0.2s, transform 0.1s; }
-        button:hover { background: #7dd3fc; }
-        button:active { transform: scale(0.97); }
+        .send-btn { background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 14px; font-weight: bold; cursor: pointer; }
+        .send-btn:hover { background: #7dd3fc; }
+        
+        /* Панель смайлов и стикеров */
+        #extra-panel { display: none; height: 180px; background: #1e293b; border-top: 1px solid rgba(255, 255, 255, 0.1); flex-direction: column; }
+        .panel-tabs { display: flex; background: #0f172a; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .tab-link { flex: 1; text-align: center; padding: 8px; cursor: pointer; font-size: 13px; font-weight: bold; color: #94a3b8; }
+        .tab-link.active { color: #38bdf8; background: #1e293b; }
+        .tab-content { flex-grow: 1; overflow-y: auto; padding: 10px; display: none; gap: 10px; flex-wrap: wrap; align-content: flex-start; }
+        .tab-content.active { display: flex; }
+        
+        .emoji-item { font-size: 22px; cursor: pointer; user-select: none; padding: 3px; }
+        .emoji-item:hover { transform: scale(1.2); }
+        .sticker-item { width: 50px; height: 50px; cursor: pointer; object-fit: contain; }
+        .sticker-item:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -40,19 +73,33 @@
         <p>Придумай никнейм, чтобы войти в приватную комнату</p>
         <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
             <input type="text" id="username" placeholder="Твоё имя или ник..." autocomplete="off">
-            <button onclick="joinChat()">Войти в чат</button>
+            <button class="send-btn" onclick="joinChat()">Войти в чат</button>
         </div>
     </div>
 
     <div id="chat-screen">
         <div class="chat-header">
             <div class="status" id="chat-title">Комната чата</div>
-            <button onclick="logout()" style="padding: 6px 12px; font-size: 11px; background: #ef4444; color: white; border: none; border-radius: 8px;">Выйти</button>
+            <button onclick="logout()" style="padding: 6px 12px; font-size: 11px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Выйти</button>
         </div>
+        
         <div id="messages"></div>
-        <div class="input-area">
-            <input type="text" id="messageText" placeholder="Написать сообщение..." autocomplete="off" onkeypress="handleKeyPress(event)">
-            <button onclick="sendMessage()">Отправить</button>
+        
+        <div class="input-container">
+            <div class="input-area">
+                <button class="panel-btn" onclick="toggleExtraPanel()">😊</button>
+                <input type="text" id="messageText" placeholder="Написать или вставить ссылку на фото..." autocomplete="off" onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">Отправить</button>
+            </div>
+            
+            <div id="extra-panel">
+                <div class="panel-tabs">
+                    <div class="tab-link active" onclick="switchTab('emojis')">Смайлы</div>
+                    <div class="tab-link" onclick="switchTab('stickers')">Стикеры</div>
+                </div>
+                <div id="tab-emojis" class="tab-content active"></div>
+                <div id="tab-stickers" class="tab-content"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -64,8 +111,37 @@
     const currentHost = window.location.host;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
 
-    // ПРОВЕРКА СЕССИИ: Если ник уже сохранен в браузере, входим автоматически
+    // База эмодзи
+    const emojis = ["😊","😂","🤣","❤","😍","👍","😁","🙌","🔥","🎉","👀","✨","😎","😢","💯","💥","🤡","💀","🤖","👾","👑"];
+    // Популярные открытые стикеры-мемы из интернета
+    const stickers = [
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbW9pZ3p5Z3Z0M2o0eWswM3I1N3M0M2JnbXNnd2t5cmhnaGoxbTNxMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/v9xsVwSshB1BsbG904/giphy.gif", // Pepe OK
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZhcXlzc2N6bjNidHlsbndpMDF3M3R5N3Znd204YzNmeTJubDdkciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/26gR2f01UTynjRIsU/giphy.gif", // Cat Dance
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHp1MGJmZ3Y0ZHRwYzJ1M2k2am8wNW55MDR3dmFwMTB5bjg3Njd6MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/TydZAW4wpxI6uS3HQn/giphy.gif", // Doge
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN6cmNreGdtY29wdTF6bHBtcG5pZnl3MWVrbmliNXFhOHF1ejVwayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/I7skS81yEwz4QZ8zM0/giphy.gif", // Poggers
+        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3lmeG4wbWZwdXBlYXlwdmsxdGZ1MGgycTlxNm5obXlpaWtlMGF1MiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/l3q2zVr6cu95nF6O4/giphy.gif"  // Pop Cat
+    ];
+
     window.onload = function() {
+        // Генерация панелей
+        const emojiTab = document.getElementById("tab-emojis");
+        emojis.forEach(e => {
+            let span = document.createElement("span");
+            span.className = "emoji-item";
+            span.innerText = e;
+            span.onclick = () => document.getElementById("messageText").value += e;
+            emojiTab.appendChild(span);
+        });
+
+        const stickerTab = document.getElementById("tab-stickers");
+        stickers.forEach(s => {
+            let img = document.createElement("img");
+            img.className = "sticker-item";
+            img.src = s;
+            img.onclick = () => sendSticker(s);
+            stickerTab.appendChild(img);
+        });
+
         const savedName = localStorage.getItem("chat_username");
         if (savedName) {
             document.getElementById("username").value = savedName;
@@ -76,14 +152,9 @@
     function joinChat() {
         const nameInput = document.getElementById("username");
         myName = nameInput.value.trim();
-        
-        if (!myName) {
-            alert("Пожалуйста, введи никнейм!");
-            return;
-        }
+        if (!myName) return alert("Пожалуйста, введи никнейм!");
 
         localStorage.setItem("chat_username", myName);
-
         ws = new WebSocket(`${wsProtocol}${currentHost}/ws/${encodeURIComponent(myName)}`);
 
         ws.onopen = function() {
@@ -94,35 +165,60 @@
 
         ws.onmessage = function(event) {
             const messagesContainer = document.getElementById('messages');
-            
-            if (event.data.startsWith("📢") || event.data.startsWith("❌")) {
-                const systemDiv = document.createElement('div');
-                systemDiv.className = 'system-msg';
-                systemDiv.innerText = event.data;
-                messagesContainer.appendChild(systemDiv);
+            const data = event.data;
+
+            if (data.includes("📢 СИСТЕМА") || data.includes("❌ СИСТЕМА")) {
+                const parts = data.split(':');
+                const text = parts.slice(2).join(':');
+                const time = parts[1];
+                
+                const div = document.createElement('div');
+                div.className = 'system-msg';
+                div.innerText = `[${time}] ${text}`;
+                messagesContainer.appendChild(div);
             } else {
-                const splitIndex = event.data.indexOf(':');
-                if (splitIndex !== -1) {
-                    const sender = event.data.substring(0, splitIndex).trim();
-                    const text = event.data.substring(splitIndex + 1).trim();
+                // Формат: Отправитель:Время:Текст
+                const firstColon = data.indexOf(':');
+                const secondColon = data.indexOf(':', firstColon + 1);
+                
+                if (firstColon !== -1 && secondColon !== -1) {
+                    const sender = data.substring(0, firstColon).trim();
+                    const time = data.substring(firstColon + 1, secondColon).trim();
+                    const text = data.substring(secondColon + 1).trim();
                     
-                    const msgDiv = document.createElement('div');
-                    msgDiv.className = sender === myName ? 'msg my-msg' : 'msg other-msg';
-                    msgDiv.innerHTML = `<span class="msg-sender">${sender}</span>${text}`;
-                    messagesContainer.appendChild(msgDiv);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = sender === myName ? 'msg-wrapper my' : 'msg-wrapper other';
+                    
+                    let contentHtml = '';
+                    
+                    // Проверка: стикер ли это
+                    if (text.startsWith("[STICKER]")) {
+                        const url = text.replace("[STICKER]", "");
+                        contentHtml = `<img class="sticker-img" src="${url}">`;
+                    } 
+                    // Проверка: ссылка ли на картинку
+                    else if (text.match(/\.(jpeg|jpg|gif|png|webp)/i) && text.startsWith("http")) {
+                        contentHtml = `<div>${text}</div><img class="chat-img" src="${text}">`;
+                    } 
+                    // Обычный текст
+                    else {
+                        contentHtml = `<div>${text}</div>`;
+                    }
+
+                    wrapper.innerHTML = `
+                        <span class="msg-author">${sender}</span>
+                        <div class="msg ${sender === myName ? 'my-msg' : 'other-msg'}">
+                            ${contentHtml}
+                            <span class="msg-time">${time}</span>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(wrapper);
                 }
             }
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         };
 
-        ws.onclose = function() {
-            setTimeout(joinChat, 5000);
-        };
-    }
-
-    function logout() {
-        localStorage.removeItem("chat_username");
-        window.location.reload();
+        ws.onclose = function() { setTimeout(joinChat, 4000); };
     }
 
     function sendMessage() {
@@ -134,8 +230,28 @@
         }
     }
 
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') sendMessage();
+    function sendSticker(url) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(`[STICKER]${url}`);
+            toggleExtraPanel();
+        }
+    }
+
+    function handleKeyPress(event) { if (event.key === 'Enter') sendMessage(); }
+    
+    function logout() { localStorage.removeItem("chat_username"); window.location.reload(); }
+    
+    function toggleExtraPanel() {
+        const p = document.getElementById("extra-panel");
+        p.style.display = p.style.display === "flex" ? "none" : "flex";
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        
+        event.target.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
     }
 </script>
 </body>
