@@ -2,89 +2,53 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PulseChat</title>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --my-msg: #38bdf8; --txt: #f8fafc; }
-        body { background: var(--bg); color: var(--txt); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { background: var(--panel); width: 100%; max-width: 450px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; background: #0f172a; color: white; font-family: sans-serif; height: 100vh; display: flex; justify-content: center; }
+        .app { width: 100%; max-width: 450px; display: flex; flex-direction: column; height: 100%; background: #1e293b; }
         
-        /* Auth Screen */
-        #auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 20px; }
-        .pulse-title { font-size: 32px; font-weight: 800; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; color: transparent; margin-bottom: 20px; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 80%; padding: 10px; border-radius: 15px; background: #334155; position: relative; }
+        .my { align-self: flex-end; background: #38bdf8; color: #0f172a; }
+        .time { font-size: 10px; opacity: 0.7; text-align: right; margin-top: 5px; }
+        .sys { align-self: center; font-size: 11px; color: #94a3b8; background: #0f172a; padding: 5px 10px; border-radius: 10px; }
         
-        /* Chat Area */
-        #chat-screen { display: none; flex-direction: column; height: 100%; position: relative; }
-        #messages { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .msg-container { max-width: 80%; display: flex; flex-direction: column; }
-        .my { align-self: flex-end; align-items: flex-end; }
-        .msg-bubble { padding: 10px 14px; border-radius: 18px; background: #334155; font-size: 15px; position: relative; }
-        .my .msg-bubble { background: var(--my-msg); color: #0f172a; border-bottom-right-radius: 4px; }
-        .sender-name { font-size: 11px; color: #94a3b8; margin-bottom: 3px; }
-        .time { font-size: 10px; margin-top: 4px; opacity: 0.7; align-self: flex-end; }
-        
-        .system { align-self: center; background: rgba(255,255,255,0.05); font-size: 11px; padding: 4px 12px; border-radius: 10px; color: #94a3b8; margin: 10px 0; }
-        
-        /* Input */
-        .input-area { padding: 10px; background: var(--bg); display: flex; gap: 8px; align-items: center; }
-        input { flex-grow: 1; padding: 12px; border-radius: 20px; border: none; background: var(--panel); color: white; outline: none; }
-        button { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--my-msg); }
-        
-        #emoji-popup { display: none; position: absolute; bottom: 70px; left: 10px; right: 10px; background: #334155; padding: 10px; border-radius: 15px; grid-template-columns: repeat(6, 1fr); gap: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .controls { padding: 15px; background: #0f172a; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border-radius: 10px; border: none; }
+        button { padding: 10px; border-radius: 10px; border: none; background: #38bdf8; cursor: pointer; }
     </style>
 </head>
 <body>
+<div class="app" id="login">
+    <h1 style="text-align:center; margin-top:50px;">PulseChat</h1>
+    <input type="text" id="user" placeholder="Никнейм" style="margin: 20px;">
+    <button onclick="join()" style="margin: 0 20px;">Войти</button>
+</div>
 
-<div class="container">
-    <div id="auth-screen">
-        <h1 class="pulse-title">PulseChat</h1>
-        <input type="text" id="username" placeholder="Ваш никнейм..." style="padding:12px; width:80%; border-radius:12px; border:none; margin-bottom:10px;">
-        <button onclick="join()" style="background:#38bdf8; color:#0f172a; padding:10px 30px; border-radius:12px; font-weight:bold;">Войти</button>
-    </div>
-
-    <div id="chat-screen">
-        <div id="messages"></div>
-        <div id="emoji-popup"></div>
-        <div class="input-area">
-            <button onclick="toggleEmoji()">😊</button>
-            <input type="text" id="msg" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">➤</button>
-        </div>
+<div class="app" id="chat" style="display:none;">
+    <div id="messages"></div>
+    <div class="controls">
+        <input type="text" id="msg" placeholder="Сообщение...">
+        <button onclick="send()">➤</button>
     </div>
 </div>
 
 <script>
     let ws;
-    const emojis = ["😊", "😂", "🔥", "👍", "❤️", "🤔", "🎉", "😎", "🚀", "💀", "✌️", "😍"];
-    const popup = document.getElementById("emoji-popup");
-    
-    emojis.forEach(e => {
-        let s = document.createElement("div"); s.innerText = e; s.style.cursor = "pointer";
-        s.onclick = () => document.getElementById("msg").value += e;
-        popup.appendChild(s);
-    });
-
-    function toggleEmoji() { popup.style.display = (popup.style.display === 'grid') ? 'none' : 'grid'; }
-
     function join() {
-        const u = document.getElementById("username").value;
+        const u = document.getElementById("user").value;
         if(!u) return;
         ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}/ws/${u}`);
-        ws.onopen = () => { document.getElementById("auth-screen").style.display = "none"; document.getElementById("chat-screen").style.display = "flex"; };
+        ws.onopen = () => { document.getElementById("login").style.display = "none"; document.getElementById("chat").style.display = "flex"; };
         ws.onmessage = (e) => {
-            const parts = e.data.split(':');
-            const sender = parts[0];
-            const time = parts[1];
-            const text = parts.slice(2).join(':');
+            const p = e.data.split(':');
             const div = document.createElement("div");
-            
-            if(sender.includes("СИСТЕМА")) {
-                div.className = "system"; div.innerText = text;
+            if(p[0].includes("СИСТЕМА")) {
+                div.className = "sys"; div.innerText = p[2];
             } else {
-                const isMy = (sender === document.getElementById("username").value);
-                div.className = "msg-container " + (isMy ? 'my' : '');
-                div.innerHTML = `<div class="sender-name">${sender}</div><div class="msg-bubble">${text}<div class="time">${time}</div></div>`;
+                div.className = "msg " + (p[0] === document.getElementById("user").value ? "my" : "");
+                div.innerHTML = `<div><b>${p[0]}</b></div><div>${p.slice(2).join(':')}</div><div class="time">${p[1]}</div>`;
             }
             document.getElementById("messages").appendChild(div);
             document.getElementById("messages").scrollTop = 9999;
@@ -92,7 +56,7 @@
     }
     function send() {
         const m = document.getElementById("msg");
-        if(m.value) { ws.send(m.value); m.value = ""; popup.style.display = 'none'; }
+        if(m.value) { ws.send(m.value); m.value = ""; }
     }
 </script>
 </body>
