@@ -228,14 +228,36 @@ input.inp::placeholder { color:var(--dim); }
 }
 @media(min-width:701px) { .sidebar-overlay { display:none !important; } }
 
-/* Fix for mobile keyboard */
+/* Fix for mobile keyboard - corrected */
 @media (max-width: 600px) {
-  .chat-panel { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-  #msgs { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .input-area { flex-shrink: 0; background: var(--surface); }
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+  #msgs {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+  .input-area {
+    flex-shrink: 0;
+    background: var(--surface);
+    margin-top: auto;
+  }
 }
-html, body, #app { height: 100%; max-height: 100%; overflow: hidden; }
-@media (min-width: 601px) { #app { height: 700px; } }
+html, body, #app {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+@media (min-width: 601px) {
+  #app {
+    height: 700px;
+  }
+}
 </style>
 </head>
 <body>
