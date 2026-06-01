@@ -138,7 +138,7 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
 .typing-bar { flex-shrink:0; min-height:26px; padding:4px 16px; font-size:12px; color:var(--dim);
   font-style:italic; font-family:'Space Mono',monospace; display:flex; align-items:center; gap:8px; }
 
-/* Input area — повышенная видимость на телефоне */
+/* Input area — просто поднято повыше */
 .input-area {
   display: flex;
   gap: 8px;
@@ -147,8 +147,7 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   border-top: 1px solid var(--border);
   align-items: center;
   flex-shrink: 0;
-  /* Добавляем отступ снизу, чтобы поле было выше */
-  margin-bottom: env(safe-area-inset-bottom, 15px);
+  margin-bottom: 30px; /* ← ЭТО ГЛАВНОЕ: поднимает поле ввода выше */
 }
 .msg-input {
   flex: 1;
@@ -534,7 +533,6 @@ window.addEventListener('resize', checkMobile); checkMobile();
 
 function showToast(msg){ let t=document.createElement('div'); t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 20px;font-size:14px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.3);'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
 
-// При фокусе на поле ввода поднимаем его в центр экрана
 msgInput.addEventListener('focus', ()=>{
   setTimeout(() => {
     msgInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
