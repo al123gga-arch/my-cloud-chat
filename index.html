@@ -198,21 +198,33 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   .sidebar.open { left:0; }
 }
 @media(min-width:701px) { .sidebar-overlay { display:none !important; } }
-/* На телефоне — обычный скролл */
+/* Исправления для мобильных: клавиатура + скрытие чата на экране логина */
 @media (max-width: 600px) {
-  body, html, #app {
-    overflow: auto !important;
+  html, body {
     height: auto !important;
     min-height: 100vh;
+    overflow: auto !important;
+    display: block;
+  }
+  body {
+    justify-content: flex-start;
+    align-items: flex-start;
   }
   #app {
+    width: 100%;
     height: auto;
+    min-height: 100vh;
     display: block;
+    overflow: visible;
+    border-radius: 0;
+    margin: 0;
+  }
+  #authScreen {
+    min-height: 100vh;
   }
   #main {
     height: auto;
-    display: flex;
-    flex-direction: column;
+    /* display управляется JS, не переопределяем */
   }
   .sidebar {
     height: auto;
@@ -225,6 +237,8 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   .chat-panel {
     height: auto;
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 }
 </style>
