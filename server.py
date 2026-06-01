@@ -4,7 +4,7 @@ import json
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Set
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Form
 from fastapi.responses import HTMLResponse
 import asyncpg
 
@@ -12,10 +12,10 @@ app = FastAPI()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Хранилища в памяти
-active_connections: Dict[str, WebSocket] = {}  # username -> ws
-messages_history: List[dict] = []  # каждый элемент: {id, sender, text, timestamp, reactions: {emoji: [users]}}
+active_connections: Dict[str, WebSocket] = {}
+messages_history: List[dict] = []
 message_id_counter = 1
-typing_users: Set[str] = set()  # кто сейчас печатает
+typing_users: Set[str] = set()
 
 @app.on_event("startup")
 async def startup():
@@ -46,7 +46,7 @@ async def startup():
         ''')
 
 @app.post("/register")
-async def register(username: str, password: str):
+async def register(username: str = Form(...), password: str = Form(...)):
     if not username or not password:
         return {"error": "Заполните все поля"}
     if len(password) < 8:
@@ -61,7 +61,7 @@ async def register(username: str, password: str):
         return {"ok": True}
 
 @app.post("/login")
-async def login(username: str, password: str):
+async def login(username: str = Form(...), password: str = Form(...)):
     async with app.state.pool.acquire() as conn:
         row = await conn.fetchrow("SELECT password_hash FROM users WHERE username = $1", username)
         if not row:
@@ -73,7 +73,6 @@ async def login(username: str, password: str):
 
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
-    # Проверка существования пользователя
     async with app.state.pool.acquire() as conn:
         user = await conn.fetchrow("SELECT 1 FROM users WHERE username = $1", username)
         if not user:
@@ -82,11 +81,9 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Отправка истории (последние 50 сообщений с реакциями)
     for msg in messages_history[-50:]:
         await websocket.send_text(json.dumps({"type": "history", "data": msg}))
     
-    # Уведомление о входе
     sys_msg = {"type": "system", "text": f"✨ {username} присоединился к чату"}
     await broadcast(sys_msg)
     
@@ -99,7 +96,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 msg_obj = {"type": "text", "text": data}
             
             if msg_obj["type"] == "text":
-                # Обычное текстовое сообщение
                 global message_id_counter
                 msg_id = message_id_counter
                 message_id_counter += 1
@@ -113,13 +109,11 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 messages_history.append(msg_data)
                 if len(messages_history) > 100:
                     messages_history.pop(0)
-                # Сохраняем в БД
                 async with app.state.pool.acquire() as conn:
                     await conn.execute("INSERT INTO messages (sender, text) VALUES ($1, $2)", username, msg_data["text"])
                 await broadcast({"type": "message", "data": msg_data})
             
             elif msg_obj["type"] == "typing":
-                # Статус печатает
                 if msg_obj.get("typing", False):
                     typing_users.add(username)
                 else:
@@ -127,9 +121,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 await broadcast({"type": "typing", "users": list(typing_users)})
             
             elif msg_obj["type"] == "delete":
-                # Удаление сообщения у всех
                 msg_id = msg_obj["msg_id"]
-                # Проверяем, что удаляющий — автор
                 for msg in messages_history:
                     if msg["id"] == msg_id and msg["sender"] == username:
                         messages_history.remove(msg)
@@ -154,12 +146,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                             msg["reactions"][emoji] = [username]
                         await broadcast({"type": "update_reactions", "msg_id": msg_id, "reactions": msg["reactions"]})
                         break
-            
-            elif msg_obj["type"] == "call_offer" or msg_obj["type"] == "call_answer" or msg_obj["type"] == "call_ice":
-                # Пересылка WebRTC сигналов только указанному пользователю
-                target = msg_obj.get("target")
-                if target in active_connections:
-                    await active_connections[target].send_text(json.dumps(msg_obj))
     
     except WebSocketDisconnect:
         pass
