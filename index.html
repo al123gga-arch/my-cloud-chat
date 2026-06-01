@@ -2,64 +2,46 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BurmaldaMessenger</title>
     <style>
-        :root { --border-gradient: linear-gradient(45deg, #ff0055, #8800ff, #00d2ff); }
-        body { background: #050505; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        
-        /* Рамка-переливайка */
-        .wrapper { position: relative; width: 400px; height: 600px; background: #111; border-radius: 20px; overflow: hidden; padding: 2px; }
-        .wrapper::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: var(--border-gradient); animation: rotate 4s linear infinite; }
-        .content { position: relative; width: 100%; height: 100%; background: #111; border-radius: 18px; display: flex; flex-direction: column; }
-        @keyframes rotate { 100% { transform: rotate(360deg); } }
-        
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 10px 15px; background: #222; border-radius: 12px; max-width: 80%; }
-        .my { align-self: flex-end; background: #444; }
-        
-        .input-area { padding: 15px; background: #1a1a1a; display: flex; gap: 10px; align-items: center; }
-        input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #444; background: #000; color: white; }
-        button { padding: 10px; border-radius: 10px; border: none; background: #444; color: white; cursor: pointer; }
-        
-        /* Смайлики */
-        #emoji-menu { display: none; padding: 10px; background: #111; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+        :root { --grad: linear-gradient(90deg, #ff0055, #8800ff, #00d2ff); }
+        body { background: #050505; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .wrapper { width: 400px; height: 600px; background: #111; border-radius: 20px; padding: 2px; position: relative; border: 2px solid transparent; background-clip: padding-box; }
+        .wrapper::before { content: ''; position: absolute; inset: -2px; border-radius: 20px; background: var(--grad); z-index: -1; }
+        .content { display: flex; flex-direction: column; height: 100%; overflow: hidden; background: #111; border-radius: 18px; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px; border-radius: 12px; background: #222; max-width: 75%; }
+        .my { align-self: flex-end; background: #00d2ff; color: #000; }
+        .controls { padding: 10px; background: #1a1a1a; display: flex; gap: 5px; align-items: center; }
+        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #000; color: white; }
+        #emoji-grid { display: none; grid-template-columns: repeat(6, 1fr); padding: 5px; background: #111; }
     </style>
 </head>
 <body>
+<div class="wrapper" id="auth"><div class="content" style="justify-content:center; align-items:center; gap:10px;">
+    <h2>BurmaldaMessenger</h2>
+    <input type="text" id="user" placeholder="Никнейм..." style="width:50%; padding:8px;">
+    <button onclick="join()">Войти</button>
+</div></div>
 
-<div class="wrapper" id="auth">
-    <div class="content" style="justify-content:center; align-items:center; gap:20px;">
-        <h1>BurmaldaMessenger</h1>
-        <input type="text" id="user" placeholder="Твой ник..." style="width:70%;">
-        <button onclick="join()">Войти</button>
+<div class="wrapper" id="chat" style="display:none;"><div class="content">
+    <div id="messages"></div>
+    <div id="emoji-grid"></div>
+    <div class="controls">
+        <button onclick="document.getElementById('emoji-grid').style.display = document.getElementById('emoji-grid').style.display === 'grid' ? 'none' : 'grid'">😊</button>
+        <input type="text" id="msg" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') send()">
+        <button onclick="send()">➤</button>
     </div>
-</div>
-
-<div class="wrapper" id="chat" style="display:none;">
-    <div class="content">
-        <div id="messages"></div>
-        <div id="emoji-menu"></div>
-        <div class="input-area">
-            <button onclick="toggleEmoji()">😊</button>
-            <input type="text" id="msg" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">➤</button>
-        </div>
-    </div>
-</div>
+</div></div>
 
 <script>
     let ws, myName;
-    const emojis = ["😀", "😂", "🥰", "😎", "🤔", "🔥", "👍", "❤️", "💀", "🚀", "🎉", "😱"];
-    const emDiv = document.getElementById("emoji-menu");
-    
+    const emojis = ["😀","😂","🥰","😎","🔥","👍","❤️","💀","🚀","🎉","😱","🤔","✅","✨","👑"];
     emojis.forEach(e => {
-        let s = document.createElement("span"); s.innerText = e; s.style.cursor="pointer";
+        let s = document.createElement("span"); s.innerText = e; s.style.cursor="pointer"; s.style.fontSize="20px";
         s.onclick = () => document.getElementById("msg").value += e;
-        emDiv.appendChild(s);
+        document.getElementById("emoji-grid").appendChild(s);
     });
-
-    function toggleEmoji() { emDiv.style.display = emDiv.style.display === 'grid' ? 'none' : 'grid'; }
 
     function join() {
         myName = document.getElementById("user").value;
@@ -72,6 +54,7 @@
             d.className = "msg " + (p[0] === myName ? "my" : "");
             d.innerText = p[0] + ": " + p.slice(1).join(':');
             document.getElementById("messages").appendChild(d);
+            document.getElementById("messages").scrollTop = 9999;
         };
     }
     function send() {
