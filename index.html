@@ -102,7 +102,7 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   color:var(--dim);cursor:pointer;transition:.15s; }
 .create-room-btn:hover { border-color:var(--accent);color:var(--accent); }
 
-/* Chat panel — FIXED для мобильного ввода */
+/* Chat panel — FIXED ДЛЯ МОБИЛЬНЫХ */
 .chat-panel {
   flex: 1;
   display: flex;
@@ -127,7 +127,7 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   flex-direction: column;
   gap: 6px;
   scroll-behavior: smooth;
-  min-height: 0; /* критично для flex-детей */
+  min-height: 0;
 }
 .msg-wrap { display:flex; flex-direction:column; max-width:82%; animation:msgIn .2s ease; }
 @keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
@@ -152,12 +152,8 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   font-family:'Space Mono',monospace; }
 .typing-bar { flex-shrink:0; min-height:26px; padding:4px 16px; font-size:12px; color:var(--dim);
   font-style:italic; font-family:'Space Mono',monospace; display:flex; align-items:center; gap:8px; }
-.typing-dots { display:inline-flex; gap:3px; }
-.typing-dots span { width:5px; height:5px; border-radius:50%; background:var(--accent);
-  animation:tdot 1.2s infinite; }
-@keyframes tdot { 0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1} }
 
-/* Input area — всегда видна на телефоне */
+/* Input area — гарантированно видна на телефоне */
 .input-area {
   display: flex;
   gap: 8px;
@@ -166,7 +162,9 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   border-top: 1px solid var(--border);
   align-items: center;
   flex-shrink: 0;
-  margin-top: 0;
+  margin-top: auto; /* прижимаем к низу */
+  position: relative;
+  z-index: 10;
 }
 .msg-input {
   flex: 1;
@@ -216,6 +214,8 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   .sidebar { position:absolute; left:-100%; top:0; bottom:0; z-index:100;
     transition:left .3s ease; box-shadow:4px 0 20px rgba(0,0,0,.4); }
   .sidebar.open { left:0; }
+  /* Дополнительно поднимаем поле ввода на телефоне, если слишком низко */
+  .input-area { padding-bottom: env(safe-area-inset-bottom, 10px); }
 }
 @media(min-width:701px) { .sidebar-overlay { display:none !important; } }
 html, body, #app { height:100%; max-height:100%; overflow:hidden; }
@@ -552,7 +552,13 @@ window.addEventListener('resize', checkMobile); checkMobile();
 
 function showToast(msg){ let t=document.createElement('div'); t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 20px;font-size:14px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.3);'; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
 
-msgInput.addEventListener('focus', ()=>{ setTimeout(()=>msgsDiv.scrollTop=msgsDiv.scrollHeight, 200); });
+// Критический фикс для мобильных устройств: при фокусе на поле ввода прокручиваем к нему
+msgInput.addEventListener('focus', ()=>{
+  setTimeout(() => {
+    msgInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    msgsDiv.scrollTop = msgsDiv.scrollHeight;
+  }, 300);
+});
 window.addEventListener('resize', ()=>{ setTimeout(()=>msgsDiv.scrollTop=msgsDiv.scrollHeight, 100); });
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ unread[currentRoom]=0; document.title='BurmaldaMess'; updateSidebarUnread(); } });
 </script>
