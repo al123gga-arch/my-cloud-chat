@@ -3,3 +3,4 @@ uvicorn
 websockets
 asyncpg
 bcrypt
+python-multipart
