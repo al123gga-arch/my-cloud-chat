@@ -15,14 +15,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-OWNER_USERNAME = os.getenv("OWNER_USERNAME", "admin")
+# Владелец по умолчанию – BurmaldaOwner (можно переопределить через переменную окружения)
+OWNER_USERNAME = os.getenv("OWNER_USERNAME", "BurmaldaOwner")
 
 # In-memory state
-active_connections: Dict[str, dict] = {}
-rooms: Dict[str, dict] = {}
-voice_rooms: Dict[str, Set[str]] = {}
+active_connections: Dict[str, dict] = {}   # {username: {"ws": WebSocket, "room": str}}
+rooms: Dict[str, dict] = {}                # {room_id: {"name": str, "messages": list, "counter": int, "typing": set, "creator": str}}
+voice_rooms: Dict[str, Set[str]] = {}      # {room_id: set(username)}
 
-# Default room
+# Общая комната
 rooms["general"] = {
     "name": "Общий чат",
     "messages": [],
@@ -41,7 +42,7 @@ async def lifespan(app: FastAPI):
     app.state.pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
 
     async with app.state.pool.acquire() as conn:
-        # Users table with role column migration
+        # users table + role column migration
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 username      TEXT PRIMARY KEY,
@@ -62,7 +63,7 @@ async def lifespan(app: FastAPI):
             $$;
         """)
 
-        # Messages table with room_id column migration
+        # messages table + room_id column migration
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id         SERIAL PRIMARY KEY,
@@ -108,7 +109,7 @@ async def lifespan(app: FastAPI):
             )
         """)
 
-        # Load saved rooms from DB
+        # Load saved rooms from DB into memory
         saved_rooms = await conn.fetch("SELECT id, name, creator FROM rooms")
         for r in saved_rooms:
             rid = r["id"]
@@ -457,12 +458,16 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     voice_rooms[current_room].discard(username)
                     await broadcast_to_room(current_room, {"type": "voice_update", "room_id": current_room, "users": list(voice_rooms[current_room])})
 
-            elif t in ("call_offer", "call_answer", "call_ice"):
+            elif t in ("call_offer", "call_answer", "call_ice", "call_reject"):
                 target = obj.get("target")
                 payload = {**obj, "from": username}
-                if target and target in active_connections:
-                    await send_to_user(target, payload)
+                if target:
+                    if target in active_connections:
+                        await send_to_user(target, payload)
+                    else:
+                        await send_to_user(username, {"type": "error", "text": "Пользователь не в сети"})
                 else:
+                    # broadcast to voice room
                     for u in voice_rooms.get(current_room, set()):
                         if u != username:
                             await send_to_user(u, payload)
