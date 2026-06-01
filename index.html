@@ -4,40 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <title>BurmaldaMessenger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         :root {
-            --bg: #050505;
-            --surface: #000;
-            --surface-light: #111;
-            --border: #333;
-            --text: #fff;
-            --accent: #00d2ff;
-            --accent-grad: linear-gradient(90deg, #00d2ff, #8800ff);
-            --message-bg: #1a1a1a;
-            --message-other: #1e1e1e;
-            --system: #888;
+            --bg: #080810;
+            --surface: #0e0e1a;
+            --surface-light: #15151f;
+            --border: #2a2a3a;
+            --text: #e8e8f0;
+            --text-dim: #6b6b88;
+            --accent: #7c5cfc;
+            --accent2: #fc5c7d;
+            --accent-grad: linear-gradient(135deg, #7c5cfc, #fc5c7d);
+            --message-mine: #7c5cfc;
+            --message-other: #1a1a2e;
+            --system: #4a4a66;
+            --glow: rgba(124, 92, 252, 0.3);
         }
         [data-theme="light"] {
-            --bg: #f0f2f5;
-            --surface: #fff;
-            --surface-light: #f5f5f5;
-            --border: #ddd;
-            --text: #111;
-            --message-bg: #e4e6eb;
-            --message-other: #dcf8c5;
-            --system: #65676b;
+            --bg: #f0eff8;
+            --surface: #ffffff;
+            --surface-light: #f5f4fc;
+            --border: #dddaf5;
+            --text: #1a1a2e;
+            --text-dim: #8888aa;
+            --message-mine: #7c5cfc;
+            --message-other: #eeecfc;
+            --system: #aaaacc;
+            --glow: rgba(124, 92, 252, 0.15);
         }
         body {
             margin: 0;
             background: var(--bg);
             color: var(--text);
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Syne', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            transition: background 0.2s;
+            transition: background 0.3s;
+        }
+        /* Background grid pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
         }
         .win {
             background: var(--surface);
@@ -45,325 +64,579 @@
             flex-direction: column;
             position: relative;
             overflow: hidden;
+            z-index: 1;
         }
         @media (max-width: 600px) {
-            .win { width: 100vw; height: 100vh; border-radius: 0; }
-            body { background: var(--bg); }
+            .win { width: 100vw; height: 100dvh; border-radius: 0; }
         }
         @media (min-width: 601px) {
-            .win { width: 500px; height: 700px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+            .win { width: 480px; height: 720px; border-radius: 24px; box-shadow: 0 0 0 1px var(--border), 0 24px 64px rgba(0,0,0,0.5), 0 0 80px var(--glow); }
         }
-        .title {
-            font-size: 32px;
-            font-weight: bold;
-            margin: 30px 0 20px 0;
-            text-align: center;
-            background: linear-gradient(45deg, #ff0055, #8800ff, #00d2ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .auth-container {
-            padding: 20px;
+
+        /* ===== AUTH ===== */
+        .auth-screen {
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 32px 28px;
+            gap: 0;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo-area {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--accent-grad);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            margin-bottom: 14px;
+            box-shadow: 0 8px 24px var(--glow);
+        }
+        .logo-title {
+            font-size: 26px;
+            font-weight: 800;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+        .logo-sub {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-top: 4px;
+            font-family: 'Space Mono', monospace;
+        }
+        .form-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
             width: 100%;
-            max-width: 320px;
-            margin: 0 auto;
+        }
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            pointer-events: none;
         }
         .input-field {
             background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 14px 18px;
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 18px 14px 44px;
             color: var(--text);
-            font-size: 16px;
+            font-size: 15px;
+            font-family: 'Syne', sans-serif;
             outline: none;
-            transition: 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s;
             width: 100%;
         }
-        .input-field:focus { border-color: var(--accent); }
+        .input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--glow);
+        }
+        .input-field::placeholder { color: var(--text-dim); }
         .btn {
             background: var(--accent-grad);
             border: none;
-            border-radius: 40px;
-            padding: 12px;
-            font-weight: bold;
-            font-size: 16px;
+            border-radius: 14px;
+            padding: 14px;
+            font-weight: 700;
+            font-size: 15px;
+            font-family: 'Syne', sans-serif;
             color: white;
             cursor: pointer;
-            transition: 0.2s;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 16px var(--glow);
+            letter-spacing: 0.3px;
         }
-        .btn-secondary {
+        .btn:active { transform: scale(0.97); }
+        .btn:hover { box-shadow: 0 6px 24px var(--glow); }
+        .btn-outline {
             background: transparent;
-            border: 1px solid var(--accent);
-            color: var(--accent);
+            border: 1.5px solid var(--border);
+            color: var(--text-dim);
+            box-shadow: none;
         }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+        .switch-row {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+        .switch-row span {
+            color: var(--accent);
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .error-msg {
+            color: var(--accent2);
+            font-size: 13px;
+            text-align: center;
+            min-height: 18px;
+            font-family: 'Space Mono', monospace;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 4px 0;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ===== CHAT ===== */
         #chat {
             display: none;
             flex-direction: column;
             height: 100%;
         }
+        .chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .chat-header-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-room-name {
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: -0.3px;
+        }
+        .chat-online {
+            font-size: 11px;
+            color: var(--text-dim);
+            font-family: 'Space Mono', monospace;
+        }
+        .chat-online .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            margin-right: 4px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .header-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            transition: background 0.15s;
+            color: var(--text);
+        }
+        .icon-btn:hover { background: var(--surface-light); }
+
         #msgs {
             flex: 1;
             overflow-y: auto;
-            padding: 12px;
+            padding: 14px 12px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
+            scroll-behavior: smooth;
         }
+        #msgs::-webkit-scrollbar { width: 4px; }
+        #msgs::-webkit-scrollbar-track { background: transparent; }
+        #msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
         .message-wrapper {
             display: flex;
             flex-direction: column;
-            max-width: 85%;
-            position: relative;
+            max-width: 82%;
+            animation: msgIn 0.2s ease;
+        }
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .my-wrapper { align-self: flex-end; }
         .other-wrapper { align-self: flex-start; }
+
         .message {
-            background: var(--message-bg);
-            padding: 8px 12px;
-            border-radius: 18px;
+            padding: 9px 13px;
+            border-radius: 16px;
             word-wrap: break-word;
-            font-size: 15px;
+            font-size: 14.5px;
+            line-height: 1.45;
             cursor: pointer;
-            transition: 0.1s;
+            transition: opacity 0.1s;
+            position: relative;
         }
-        .my-message { background: var(--accent); color: #000; border-bottom-right-radius: 4px; }
-        .other-message { background: var(--message-other); border-bottom-left-radius: 4px; }
+        .message:active { opacity: 0.8; }
+        .my-message {
+            background: var(--message-mine);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .other-message {
+            background: var(--message-other);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border);
+        }
         .sender-name {
-            font-size: 12px;
-            font-weight: bold;
+            font-size: 11px;
+            font-weight: 700;
             color: var(--accent);
-            margin-bottom: 2px;
+            margin-bottom: 3px;
+            font-family: 'Space Mono', monospace;
         }
+        .msg-time {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 3px;
+            text-align: right;
+            font-family: 'Space Mono', monospace;
+        }
+        .other-message .msg-time { color: var(--text-dim); }
+
         .system {
             color: var(--system);
-            font-size: 12px;
+            font-size: 11.5px;
             text-align: center;
-            margin: 4px 0;
+            margin: 6px 0;
+            font-family: 'Space Mono', monospace;
         }
-        .reactions {
+        .reactions-row {
             display: flex;
-            gap: 5px;
-            margin-top: 4px;
-            font-size: 14px;
+            gap: 4px;
+            margin-top: 5px;
+            flex-wrap: wrap;
         }
         .reaction {
             background: var(--surface-light);
+            border: 1px solid var(--border);
             border-radius: 20px;
-            padding: 2px 6px;
+            padding: 2px 8px;
             cursor: pointer;
+            font-size: 13px;
+            transition: border-color 0.15s;
         }
-        .typing-indicator {
+        .reaction:hover { border-color: var(--accent); }
+
+        .typing-bar {
+            min-height: 24px;
+            padding: 4px 16px;
             font-size: 12px;
-            color: var(--system);
-            padding: 5px 12px;
+            color: var(--text-dim);
             font-style: italic;
+            font-family: 'Space Mono', monospace;
         }
+
         .input-area {
             display: flex;
             gap: 8px;
-            padding: 10px;
-            background: var(--surface-light);
+            padding: 10px 12px;
+            background: var(--surface);
             border-top: 1px solid var(--border);
             align-items: center;
         }
-        .emoji-btn, .theme-toggle, .logout-btn, .call-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 30px;
-            transition: 0.1s;
-        }
         .message-input {
             flex: 1;
+            background: var(--surface-light);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 14.5px;
+            font-family: 'Syne', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            resize: none;
+            min-height: 42px;
+            max-height: 100px;
+        }
+        .message-input:focus { border-color: var(--accent); }
+        .message-input::placeholder { color: var(--text-dim); }
+        .send-btn {
+            background: var(--accent-grad);
+            border: none;
+            border-radius: 12px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            flex-shrink: 0;
+            box-shadow: 0 2px 10px var(--glow);
+        }
+        .send-btn:active { transform: scale(0.92); }
+
+        /* Emoji picker */
+        .emoji-picker {
+            position: fixed;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 30px;
-            padding: 10px 16px;
-            color: var(--text);
-            font-size: 15px;
-            outline: none;
+            border-radius: 16px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: fadeIn 0.15s ease;
         }
-        .send-btn {
-            background: var(--accent);
+        .emoji-picker button {
+            font-size: 24px;
+            background: none;
             border: none;
-            border-radius: 30px;
-            padding: 8px 16px;
-            font-weight: bold;
-            color: black;
             cursor: pointer;
+            border-radius: 8px;
+            padding: 4px;
+            transition: background 0.1s;
         }
-        .error {
-            color: #ff4466;
-            font-size: 13px;
-            text-align: center;
-            margin-top: 5px;
-        }
-        .switch-form {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .switch-form span {
-            color: var(--accent);
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        .badge {
-            background: red;
-            color: white;
-            border-radius: 12px;
-            padding: 2px 6px;
-            font-size: 12px;
-            position: absolute;
-            top: 5px;
-            right: 5px;
-        }
+        .emoji-picker button:hover { background: var(--surface-light); }
+
+        /* Call modal */
         .call-modal {
             position: fixed;
             bottom: 100px;
             left: 20px;
             background: var(--surface);
             border-radius: 16px;
-            padding: 10px;
+            padding: 12px;
             z-index: 100;
             border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
-        video { width: 200px; border-radius: 12px; }
+        video { width: 200px; border-radius: 10px; display: block; margin-bottom: 8px; }
+        .hangup-btn {
+            background: var(--accent2);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 16px;
+            color: white;
+            font-weight: 700;
+            font-family: 'Syne', sans-serif;
+            cursor: pointer;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 <div class="win" id="app">
-    <div id="authForm">
-        <div class="title">BurmaldaMessenger</div>
-        <div class="auth-container">
-            <input type="text" id="loginUsername" class="input-field" placeholder="Никнейм" autocomplete="username">
-            <input type="password" id="loginPassword" class="input-field" placeholder="Пароль (мин. 8 символов)" autocomplete="current-password">
-            <button id="loginBtn" class="btn">Войти</button>
-            <div class="switch-form">Нет аккаунта? <span id="showRegister">Зарегистрироваться</span></div>
-            <div id="authError" class="error"></div>
+
+    <!-- LOGIN -->
+    <div id="authForm" style="display:flex;flex-direction:column;height:100%;">
+        <div class="auth-screen">
+            <div class="logo-area">
+                <div class="logo-icon">💬</div>
+                <div class="logo-title">BurmaldaMessenger</div>
+                <div class="logo-sub">// secure · real-time · minimal</div>
+            </div>
+            <div class="form-fields">
+                <div class="input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="loginUsername" class="input-field" placeholder="Никнейм" autocomplete="username">
+                </div>
+                <div class="input-wrap">
+                    <span class="input-icon">🔑</span>
+                    <input type="password" id="loginPassword" class="input-field" placeholder="Пароль" autocomplete="current-password">
+                </div>
+                <div class="error-msg" id="authError"></div>
+                <button id="loginBtn" class="btn">Войти</button>
+                <div class="divider">или</div>
+                <button id="showRegister" class="btn btn-outline">Создать аккаунт</button>
+            </div>
         </div>
     </div>
-    <div id="registerForm" style="display: none;">
-        <div class="title">Регистрация</div>
-        <div class="auth-container">
-            <input type="text" id="regUsername" class="input-field" placeholder="Уникальный ник" autocomplete="off">
-            <input type="password" id="regPassword" class="input-field" placeholder="Пароль (≥8 символов)" autocomplete="new-password">
-            <button id="registerBtn" class="btn">Создать аккаунт</button>
-            <div class="switch-form">Уже есть аккаунт? <span id="showLogin">Войти</span></div>
-            <div id="regError" class="error"></div>
+
+    <!-- REGISTER -->
+    <div id="registerForm" style="display:none;flex-direction:column;height:100%;">
+        <div class="auth-screen">
+            <div class="logo-area">
+                <div class="logo-icon">✨</div>
+                <div class="logo-title">Регистрация</div>
+                <div class="logo-sub">// создай аккаунт</div>
+            </div>
+            <div class="form-fields">
+                <div class="input-wrap">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="regUsername" class="input-field" placeholder="Уникальный ник" autocomplete="off">
+                </div>
+                <div class="input-wrap">
+                    <span class="input-icon">🔑</span>
+                    <input type="password" id="regPassword" class="input-field" placeholder="Пароль (мин. 8 символов)" autocomplete="new-password">
+                </div>
+                <div class="error-msg" id="regError"></div>
+                <button id="registerBtn" class="btn">Создать аккаунт</button>
+                <div class="divider">или</div>
+                <button id="showLogin" class="btn btn-outline">Уже есть аккаунт</button>
+            </div>
         </div>
     </div>
+
+    <!-- CHAT -->
     <div id="chat">
-        <div style="display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border);">
-            <button id="themeToggle" class="theme-toggle">🌙</button>
-            <button id="logoutBtn" class="logout-btn" style="font-size: 18px;">🚪 Выйти</button>
-            <button id="callBtn" class="call-btn">📞</button>
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <div class="chat-room-name">Общий чат</div>
+                <div class="chat-online"><span class="dot"></span><span id="onlineCount">в сети</span></div>
+            </div>
+            <div class="header-actions">
+                <button id="themeToggle" class="icon-btn" title="Тема">🌙</button>
+                <button id="callBtn" class="icon-btn" title="Звонок">📞</button>
+                <button id="logoutBtn" class="icon-btn" title="Выйти">🚪</button>
+            </div>
         </div>
         <div id="msgs"></div>
-        <div id="typingStatus" class="typing-indicator"></div>
+        <div id="typingStatus" class="typing-bar"></div>
         <div class="input-area">
-            <button id="emojiBtn" class="emoji-btn">😊</button>
+            <button id="emojiBtn" class="icon-btn">😊</button>
             <input type="text" id="messageInput" class="message-input" placeholder="Сообщение..." autocomplete="off">
             <button id="sendBtn" class="send-btn">➤</button>
         </div>
     </div>
+
 </div>
 <script>
-    // ---------- Глобальные ----------
+    // ===== GLOBALS =====
     let ws = null;
     let currentUser = null;
     let unreadCount = 0;
-    let originalTitle = document.title;
+    const originalTitle = document.title;
     let typingTimeout = null;
-    let messagesMap = new Map(); // id -> DOM элемент
+    const messagesMap = new Map();
     let callPeer = null;
     let localStream = null;
 
-    // DOM
-    const authForm = document.getElementById('authForm');
+    // ===== DOM =====
+    const authForm     = document.getElementById('authForm');
     const registerForm = document.getElementById('registerForm');
-    const chatDiv = document.getElementById('chat');
-    const msgsDiv = document.getElementById('msgs');
+    const chatDiv      = document.getElementById('chat');
+    const msgsDiv      = document.getElementById('msgs');
     const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const themeToggle = document.getElementById('themeToggle');
-    const callBtn = document.getElementById('callBtn');
 
-    // Переключение тем
-    function setTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        themeToggle.innerText = theme === 'dark' ? '🌙' : '☀️';
+    // ===== THEME =====
+    function setTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        localStorage.setItem('theme', t);
+        document.getElementById('themeToggle').innerText = t === 'dark' ? '🌙' : '☀️';
     }
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    themeToggle.onclick = () => {
-        const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
+    setTheme(localStorage.getItem('theme') || 'dark');
+    document.getElementById('themeToggle').onclick = () => {
+        setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     };
 
-    // Переключение форм
-    document.getElementById('showRegister').onclick = () => { authForm.style.display = 'none'; registerForm.style.display = 'flex'; clearErrors(); };
-    document.getElementById('showLogin').onclick = () => { registerForm.style.display = 'none'; authForm.style.display = 'flex'; clearErrors(); };
-    function clearErrors() { document.getElementById('authError').innerText = ''; document.getElementById('regError').innerText = ''; }
+    // ===== AUTH SWITCH =====
+    document.getElementById('showRegister').onclick = () => {
+        authForm.style.display = 'none';
+        registerForm.style.display = 'flex';
+        clearErrors();
+    };
+    document.getElementById('showLogin').onclick = () => {
+        registerForm.style.display = 'none';
+        authForm.style.display = 'flex';
+        clearErrors();
+    };
+    function clearErrors() {
+        document.getElementById('authError').innerText = '';
+        document.getElementById('regError').innerText = '';
+    }
 
-    // Функции ошибок
-    function showAuthError(msg) { document.getElementById('authError').innerText = msg; }
-    function showRegError(msg) { document.getElementById('regError').innerText = msg; }
-
-    // Логин
+    // ===== LOGIN =====
     document.getElementById('loginBtn').onclick = async () => {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
-        if (!username || !password) { showAuthError('Заполните оба поля'); return; }
-        const res = await fetch('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-        });
-        const data = await res.json();
-        if (data.ok) {
-            currentUser = data.username;
-            localStorage.setItem('burmalda_user', currentUser);
-            connectWebSocket();
-        } else {
-            showAuthError(data.error);
+        if (!username || !password) { document.getElementById('authError').innerText = 'Заполните оба поля'; return; }
+        try {
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+            });
+            const data = await res.json();
+            if (data.ok) {
+                currentUser = data.username;
+                localStorage.setItem('burmalda_user', currentUser);
+                connectWebSocket();
+            } else {
+                document.getElementById('authError').innerText = data.error || 'Ошибка входа';
+            }
+        } catch(e) {
+            document.getElementById('authError').innerText = 'Нет соединения с сервером';
         }
     };
+    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('loginBtn').click();
+    });
 
-    // Регистрация
+    // ===== REGISTER =====
     document.getElementById('registerBtn').onclick = async () => {
         const username = document.getElementById('regUsername').value.trim();
         const password = document.getElementById('regPassword').value;
-        if (!username || !password) { showRegError('Заполните оба поля'); return; }
-        if (password.length < 8) { showRegError('Пароль должен быть минимум 8 символов'); return; }
-        const res = await fetch('/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-        });
-        const data = await res.json();
-        if (data.ok) {
-            registerForm.style.display = 'none';
-            authForm.style.display = 'flex';
-            document.getElementById('loginUsername').value = username;
-            document.getElementById('loginPassword').value = password;
-            showAuthError('Регистрация успешна! Теперь войдите.');
-        } else {
-            showRegError(data.error);
+        if (!username || !password) { document.getElementById('regError').innerText = 'Заполните оба поля'; return; }
+        if (password.length < 8) { document.getElementById('regError').innerText = 'Пароль минимум 8 символов'; return; }
+        try {
+            const res = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+            });
+            const data = await res.json();
+            if (data.ok) {
+                registerForm.style.display = 'none';
+                authForm.style.display = 'flex';
+                document.getElementById('loginUsername').value = username;
+                document.getElementById('authError').innerText = '';
+                document.getElementById('authError').style.color = '#4ade80';
+                document.getElementById('authError').innerText = '✓ Аккаунт создан — войдите';
+            } else {
+                document.getElementById('regError').innerText = data.error || 'Ошибка регистрации';
+            }
+        } catch(e) {
+            document.getElementById('regError').innerText = 'Нет соединения с сервером';
         }
     };
 
-    // WebSocket
+    // ===== WEBSOCKET =====
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         ws = new WebSocket(`${protocol}${window.location.host}/ws/${encodeURIComponent(currentUser)}`);
+
         ws.onopen = () => {
             authForm.style.display = 'none';
             registerForm.style.display = 'none';
@@ -373,18 +646,26 @@
             unreadCount = 0;
             document.title = originalTitle;
         };
+
         ws.onmessage = (e) => {
             const msg = JSON.parse(e.data);
             handleMessage(msg);
         };
+
         ws.onclose = () => {
             if (chatDiv.style.display === 'flex') {
                 alert('Соединение потеряно. Обновите страницу.');
                 logout();
             }
         };
+
+        ws.onerror = () => {
+            document.getElementById('authError').style.color = '#fc5c7d';
+            document.getElementById('authError').innerText = 'Ошибка соединения';
+        };
     }
 
+    // ===== MESSAGE HANDLER =====
     function handleMessage(msg) {
         if (msg.type === 'history') {
             renderMessage(msg.data);
@@ -401,88 +682,95 @@
             msgsDiv.appendChild(div);
             msgsDiv.scrollTop = msgsDiv.scrollHeight;
         } else if (msg.type === 'typing') {
-            const typingDiv = document.getElementById('typingStatus');
-            if (msg.users.length && !(msg.users.length === 1 && msg.users[0] === currentUser)) {
-                let names = msg.users.filter(u => u !== currentUser);
-                if (names.length) typingDiv.innerText = names.join(', ') + ' печатает...';
-                else typingDiv.innerText = '';
-            } else {
-                typingDiv.innerText = '';
-            }
+            const names = msg.users.filter(u => u !== currentUser);
+            document.getElementById('typingStatus').innerText =
+                names.length ? names.join(', ') + (names.length === 1 ? ' печатает...' : ' печатают...') : '';
         } else if (msg.type === 'delete') {
             const el = messagesMap.get(msg.msg_id);
             if (el) el.remove();
             messagesMap.delete(msg.msg_id);
         } else if (msg.type === 'update_reactions') {
-            const msgDiv = messagesMap.get(msg.msg_id);
-            if (msgDiv) {
-                let reactionsDiv = msgDiv.querySelector('.reactions');
-                if (!reactionsDiv) {
-                    reactionsDiv = document.createElement('div');
-                    reactionsDiv.className = 'reactions';
-                    msgDiv.appendChild(reactionsDiv);
+            const wrapper = messagesMap.get(msg.msg_id);
+            if (wrapper) {
+                let reactDiv = wrapper.querySelector('.reactions-row');
+                if (!reactDiv) {
+                    reactDiv = document.createElement('div');
+                    reactDiv.className = 'reactions-row';
+                    wrapper.appendChild(reactDiv);
                 }
-                reactionsDiv.innerHTML = '';
+                reactDiv.innerHTML = '';
                 for (const [emoji, users] of Object.entries(msg.reactions)) {
                     const span = document.createElement('span');
                     span.className = 'reaction';
                     span.innerText = `${emoji} ${users.length}`;
                     span.onclick = (e) => { e.stopPropagation(); sendReaction(msg.msg_id, emoji); };
-                    reactionsDiv.appendChild(span);
+                    reactDiv.appendChild(span);
                 }
+            }
+        } else if (msg.type === 'call_offer') {
+            // incoming call — handle if needed
+        } else if (msg.type === 'call_ice') {
+            if (callPeer && msg.candidate) {
+                callPeer.addIceCandidate(new RTCIceCandidate(msg.candidate)).catch(() => {});
             }
         }
     }
 
+    // ===== RENDER MESSAGE =====
     function renderMessage(data) {
+        const isMe = data.sender === currentUser;
         const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${data.sender === currentUser ? 'my-wrapper' : 'other-wrapper'}`;
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${data.sender === currentUser ? 'my-message' : 'other-message'}`;
-        if (data.sender !== currentUser) {
+        wrapper.className = `message-wrapper ${isMe ? 'my-wrapper' : 'other-wrapper'}`;
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isMe ? 'my-message' : 'other-message'}`;
+
+        if (!isMe) {
             const nameSpan = document.createElement('div');
             nameSpan.className = 'sender-name';
             nameSpan.innerText = data.sender;
-            messageDiv.appendChild(nameSpan);
+            msgDiv.appendChild(nameSpan);
         }
+
         const textSpan = document.createElement('span');
         textSpan.innerText = data.text;
-        messageDiv.appendChild(textSpan);
-        wrapper.appendChild(messageDiv);
-        
-        // Реакции
+        msgDiv.appendChild(textSpan);
+
+        if (data.timestamp) {
+            const timeSpan = document.createElement('div');
+            timeSpan.className = 'msg-time';
+            const d = new Date(data.timestamp);
+            timeSpan.innerText = d.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+            msgDiv.appendChild(timeSpan);
+        }
+
+        wrapper.appendChild(msgDiv);
+
         if (data.reactions && Object.keys(data.reactions).length) {
-            const reactionsDiv = document.createElement('div');
-            reactionsDiv.className = 'reactions';
+            const reactDiv = document.createElement('div');
+            reactDiv.className = 'reactions-row';
             for (const [emoji, users] of Object.entries(data.reactions)) {
                 const span = document.createElement('span');
                 span.className = 'reaction';
                 span.innerText = `${emoji} ${users.length}`;
                 span.onclick = (e) => { e.stopPropagation(); sendReaction(data.id, emoji); };
-                reactionsDiv.appendChild(span);
+                reactDiv.appendChild(span);
             }
-            wrapper.appendChild(reactionsDiv);
+            wrapper.appendChild(reactDiv);
         }
-        
-        // Контекстное меню / долгое нажатие для удаления
+
+        // Long press / context menu → delete
         let pressTimer;
-        messageDiv.addEventListener('touchstart', (e) => {
-            pressTimer = setTimeout(() => {
-                showDeleteMenu(data.id, data.sender === currentUser);
-            }, 500);
+        msgDiv.addEventListener('touchstart', () => { pressTimer = setTimeout(() => showDeleteMenu(data.id, isMe), 500); });
+        msgDiv.addEventListener('touchend', () => clearTimeout(pressTimer));
+        msgDiv.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        msgDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showDeleteMenu(data.id, isMe); });
+
+        // Click → reaction picker
+        msgDiv.addEventListener('click', (e) => {
+            if (e.target === msgDiv || e.target === textSpan) showReactionPicker(data.id, msgDiv);
         });
-        messageDiv.addEventListener('touchend', () => clearTimeout(pressTimer));
-        messageDiv.addEventListener('touchmove', () => clearTimeout(pressTimer));
-        messageDiv.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            showDeleteMenu(data.id, data.sender === currentUser);
-        });
-        
-        // Клик для реакций (быстрое меню)
-        messageDiv.addEventListener('click', (e) => {
-            if (e.target === messageDiv || e.target === textSpan) showReactionPicker(data.id);
-        });
-        
+
         msgsDiv.appendChild(wrapper);
         msgsDiv.scrollTop = msgsDiv.scrollHeight;
         messagesMap.set(data.id, wrapper);
@@ -490,8 +778,7 @@
 
     function showDeleteMenu(msgId, isAuthor) {
         if (!isAuthor) return;
-        const choice = confirm('Удалить сообщение?\n"OK" — удалить у всех\n"Отмена" — только у себя');
-        if (choice) {
+        if (confirm('Удалить сообщение у всех?')) {
             ws.send(JSON.stringify({ type: 'delete', msg_id: msgId }));
         } else {
             const el = messagesMap.get(msgId);
@@ -500,145 +787,118 @@
         }
     }
 
-    function showReactionPicker(msgId) {
+    function showReactionPicker(msgId, anchor) {
+        document.querySelectorAll('.emoji-picker').forEach(p => p.remove());
         const emojis = ['😍','❤️','😂','🤣','😡','👿','👍','👎','🎉','🔥','✅','😭','💀','✌️','😘','🥲'];
-        let picker = document.createElement('div');
-        picker.style.position = 'fixed';
-        picker.style.bottom = '80px';
-        picker.style.left = '20px';
-        picker.style.background = 'var(--surface)';
-        picker.style.borderRadius = '20px';
-        picker.style.padding = '8px';
-        picker.style.display = 'grid';
+        const picker = document.createElement('div');
+        picker.className = 'emoji-picker';
         picker.style.gridTemplateColumns = 'repeat(4, 1fr)';
-        picker.style.gap = '6px';
-        picker.style.border = '1px solid var(--border)';
-        picker.style.zIndex = '200';
+        const rect = anchor.getBoundingClientRect();
+        picker.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        picker.style.left = Math.max(8, rect.left) + 'px';
         emojis.forEach(emo => {
             const btn = document.createElement('button');
             btn.textContent = emo;
-            btn.style.fontSize = '28px';
-            btn.style.background = 'none';
-            btn.style.border = 'none';
-            btn.style.cursor = 'pointer';
-            btn.onclick = () => {
-                sendReaction(msgId, emo);
-                picker.remove();
-            };
+            btn.onclick = () => { sendReaction(msgId, emo); picker.remove(); };
             picker.appendChild(btn);
         });
         document.body.appendChild(picker);
         setTimeout(() => picker.remove(), 5000);
+        document.addEventListener('click', () => picker.remove(), { once: true });
     }
 
     function sendReaction(msgId, emoji) {
-        ws.send(JSON.stringify({ type: 'react', msg_id: msgId, emoji: emoji }));
+        if (ws && ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: 'react', msg_id: msgId, emoji }));
     }
 
-    // Отправка сообщения + статус печатает
+    // ===== SEND MESSAGE =====
     function sendMessage() {
         const text = messageInput.value.trim();
         if (text && ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'text', text: text }));
+            ws.send(JSON.stringify({ type: 'text', text }));
             messageInput.value = '';
             clearTyping();
         }
     }
     function startTyping() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'typing', typing: true }));
-            if (typingTimeout) clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(clearTyping, 2000);
-        }
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: 'typing', typing: true }));
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(clearTyping, 2000);
     }
     function clearTyping() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === WebSocket.OPEN)
             ws.send(JSON.stringify({ type: 'typing', typing: false }));
-        }
     }
     messageInput.addEventListener('input', startTyping);
-    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    document.getElementById('sendBtn').onclick = sendMessage;
 
-    // Выход
+    // ===== EMOJI PICKER =====
+    document.getElementById('emojiBtn').onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.emoji-picker').forEach(p => p.remove());
+        const emojis = ['😀','😂','😍','😎','😢','🔥','❤️','👍','🎉','🤔','👀','✅','⭐','🍕','💀','🤯','💯','🙈','😤','🥳'];
+        const picker = document.createElement('div');
+        picker.className = 'emoji-picker';
+        picker.style.bottom = '80px';
+        picker.style.left = '12px';
+        emojis.forEach(emo => {
+            const btn = document.createElement('button');
+            btn.textContent = emo;
+            btn.onclick = () => { messageInput.value += emo; messageInput.focus(); picker.remove(); };
+            picker.appendChild(btn);
+        });
+        document.body.appendChild(picker);
+        setTimeout(() => picker.remove(), 6000);
+        setTimeout(() => document.addEventListener('click', () => picker.remove(), { once: true }), 100);
+    };
+
+    // ===== LOGOUT =====
     function logout() {
-        if (ws) ws.close();
+        if (ws) { ws.close(); ws = null; }
         localStorage.removeItem('burmalda_user');
         currentUser = null;
         chatDiv.style.display = 'none';
         authForm.style.display = 'flex';
         registerForm.style.display = 'none';
         document.getElementById('loginPassword').value = '';
-        document.getElementById('loginUsername').value = '';
+        document.getElementById('authError').style.color = '#fc5c7d';
+        document.getElementById('authError').innerText = '';
     }
-    logoutBtn.onclick = logout;
+    document.getElementById('logoutBtn').onclick = logout;
 
-    // Эмодзи-пикер в поле ввода
-    document.getElementById('emojiBtn').onclick = () => {
-        const picker = document.createElement('div');
-        picker.style.position = 'fixed';
-        picker.style.bottom = '80px';
-        picker.style.left = '20px';
-        picker.style.background = 'var(--surface)';
-        picker.style.borderRadius = '20px';
-        picker.style.padding = '8px';
-        picker.style.display = 'grid';
-        picker.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        picker.style.gap = '6px';
-        picker.style.border = '1px solid var(--border)';
-        const emojis = ['😀','😂','😍','😎','😢','🔥','❤️','👍','🎉','🤔','👀','✅','⭐','🍕','💀'];
-        emojis.forEach(emo => {
-            const btn = document.createElement('button');
-            btn.textContent = emo;
-            btn.style.fontSize = '28px';
-            btn.style.background = 'none';
-            btn.style.border = 'none';
-            btn.onclick = () => {
-                messageInput.value += emo;
-                picker.remove();
-            };
-            picker.appendChild(btn);
-        });
-        document.body.appendChild(picker);
-        setTimeout(() => picker.remove(), 5000);
-    };
-
-    // Простой WebRTC звонок (без сервера сигнализации, только peer-to-peer)
-    callBtn.onclick = async () => {
-        if (!navigator.mediaDevices) { alert('Ваш браузер не поддерживает звонки'); return; }
+    // ===== CALL (WebRTC) =====
+    document.getElementById('callBtn').onclick = async () => {
+        if (!navigator.mediaDevices) { alert('Браузер не поддерживает звонки'); return; }
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             const modal = document.createElement('div');
             modal.className = 'call-modal';
-            modal.innerHTML = `<video id="localVideo" autoplay muted style="width:100%"></video><video id="remoteVideo" autoplay style="width:100%"></video><button id="hangup">Завершить</button>`;
+            modal.innerHTML = `<video id="localVideo" autoplay muted></video><video id="remoteVideo" autoplay></video><button class="hangup-btn" id="hangup">📵 Завершить</button>`;
             document.body.appendChild(modal);
             document.getElementById('localVideo').srcObject = localStream;
             callPeer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
             localStream.getTracks().forEach(track => callPeer.addTrack(track, localStream));
-            callPeer.ontrack = event => { document.getElementById('remoteVideo').srcObject = event.streams[0]; };
-            callPeer.onicecandidate = event => {
-                if (event.candidate) ws.send(JSON.stringify({ type: 'call_ice', target: null, candidate: event.candidate }));
+            callPeer.ontrack = ev => { document.getElementById('remoteVideo').srcObject = ev.streams[0]; };
+            callPeer.onicecandidate = ev => {
+                if (ev.candidate && ws && ws.readyState === WebSocket.OPEN)
+                    ws.send(JSON.stringify({ type: 'call_ice', candidate: ev.candidate }));
             };
-            // Создаём offer и рассылаем всем (в демо-версии звоним всем)
             const offer = await callPeer.createOffer();
             await callPeer.setLocalDescription(offer);
-            ws.send(JSON.stringify({ type: 'call_offer', target: null, offer: offer }));
+            if (ws && ws.readyState === WebSocket.OPEN)
+                ws.send(JSON.stringify({ type: 'call_offer', offer }));
             document.getElementById('hangup').onclick = () => {
-                if (callPeer) callPeer.close();
-                if (localStream) localStream.getTracks().forEach(t => t.stop());
+                if (callPeer) { callPeer.close(); callPeer = null; }
+                if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
                 modal.remove();
             };
         } catch(e) { alert('Не удалось получить доступ к камере/микрофону'); }
     };
-    // Обработка входящих WebRTC сигналов
-    ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        if (msg.type === 'call_offer') {
-            // автоматически отвечаем (упрощённо)
-        }
-    };
 
-    // Непрочитанные при переключении вкладки
+    // ===== UNREAD ON TAB SWITCH =====
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
             unreadCount = 0;
