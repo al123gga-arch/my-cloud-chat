@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>BurmaldaMessenger</title>
-<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
@@ -28,14 +27,13 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index
     linear-gradient(90deg,var(--border) 1px,transparent 1px);
   background-size:40px 40px; opacity:.25; }
 
-/* ===== APP SHELL ===== */
 #app { position:relative; z-index:1; display:flex; flex-direction:column;
   background:var(--surface); overflow:hidden; }
 @media(max-width:600px){ #app{width:100vw;height:100dvh;border-radius:0;} }
 @media(min-width:601px){ #app{width:920px;height:700px;border-radius:24px;
   box-shadow:0 0 0 1px var(--border),0 24px 64px rgba(0,0,0,.5),0 0 80px var(--glow);} }
 
-/* ===== AUTH ===== */
+/* Auth */
 .auth-wrap { display:flex; flex-direction:column; align-items:center;
   justify-content:center; height:100%; padding:32px 24px; animation:fadeUp .4s ease; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -47,8 +45,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index
 .logo-sub { font-size:12px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace; }
 .form { display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:28px; }
 .inp-wrap { position:relative; }
-.inp-icon { position:absolute;left:14px;top:50%;transform:translateY(-50%);
-  font-size:15px;pointer-events:none; }
+.inp-icon { position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none; }
 input.inp { background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;
   padding:13px 16px 13px 42px;color:var(--text);font-size:15px;font-family:'Syne',sans-serif;
   outline:none;transition:.2s;width:100%; }
@@ -67,10 +64,8 @@ input.inp::placeholder { color:var(--dim); }
 .divider { display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px; }
 .divider::before,.divider::after { content:'';flex:1;height:1px;background:var(--border); }
 
-/* ===== MAIN LAYOUT ===== */
+/* Main layout */
 #main { display:none; height:100%; flex-direction:row; }
-
-/* Sidebar */
 .sidebar { width:var(--sidebar-w);flex-shrink:0;display:flex;flex-direction:column;
   border-right:1px solid var(--border);background:var(--surface);height:100%; }
 .sidebar-header { padding:14px 12px 10px;border-bottom:1px solid var(--border); }
@@ -90,7 +85,6 @@ input.inp::placeholder { color:var(--dim); }
 .chat-item { display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;
   cursor:pointer;transition:.15s;position:relative; }
 .chat-item:hover,.chat-item.active { background:var(--surface3); }
-.chat-item.active { background:var(--surface3); }
 .chat-item-info { flex:1;min-width:0; }
 .chat-item-name { font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis; }
@@ -124,8 +118,6 @@ input.inp::placeholder { color:var(--dim); }
   gap:6px;scroll-behavior:smooth; }
 #msgs::-webkit-scrollbar { width:4px; }
 #msgs::-webkit-scrollbar-thumb { background:var(--border);border-radius:4px; }
-
-/* Messages */
 .msg-wrap { display:flex;flex-direction:column;max-width:82%;animation:msgIn .2s ease; }
 @keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
 .msg-wrap.me { align-self:flex-end; }
@@ -148,7 +140,6 @@ input.inp::placeholder { color:var(--dim); }
 .reaction:hover { border-color:var(--accent); }
 .system { color:var(--dim);font-size:11.5px;text-align:center;margin:6px 0;
   font-family:'Space Mono',monospace; }
-/* Typing animation */
 .typing-bar { min-height:26px;padding:4px 16px;font-size:12px;color:var(--dim);
   font-style:italic;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:8px; }
 .typing-dots { display:inline-flex;gap:3px; }
@@ -158,7 +149,6 @@ input.inp::placeholder { color:var(--dim); }
 .typing-dots span:nth-child(3) { animation-delay:.4s; }
 @keyframes tdot { 0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1} }
 
-/* Input area */
 .input-area { display:flex;gap:8px;padding:10px 12px;background:var(--surface);
   border-top:1px solid var(--border);align-items:center; }
 .msg-input { flex:1;background:var(--surface2);border:1.5px solid var(--border);
@@ -171,14 +161,12 @@ input.inp::placeholder { color:var(--dim); }
   cursor:pointer;transition:.15s;box-shadow:0 2px 10px var(--glow);flex-shrink:0; }
 .send-btn:active { transform:scale(.92); }
 
-/* Avatar */
 .avatar { width:38px;height:38px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;
   font-family:'Syne',sans-serif; }
 .avatar.sm { width:28px;height:28px;font-size:11px; }
 .avatar.lg { width:52px;height:52px;font-size:20px; }
 
-/* Voice panel */
 .voice-panel { background:var(--surface2);border-top:1px solid var(--border);
   padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
 .voice-title { font-size:12px;color:var(--dim);font-family:'Space Mono',monospace; }
@@ -192,7 +180,6 @@ input.inp::placeholder { color:var(--dim); }
 .mic-btn.off { background:var(--surface3);color:var(--dim); }
 .mic-btn.on { background:var(--accent);color:#fff;box-shadow:0 0 12px var(--glow); }
 
-/* Profile modal */
 .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;
   display:flex;align-items:center;justify-content:center;animation:fadeIn .2s; }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -216,16 +203,12 @@ input.inp::placeholder { color:var(--dim); }
 .modal-close { background:none;border:none;color:var(--dim);font-size:22px;
   cursor:pointer;float:right;margin-top:-4px; }
 
-/* Create room modal */
 .create-modal { background:var(--surface);border-radius:20px;padding:24px;
   width:320px;border:1px solid var(--border);animation:fadeUp .2s ease; }
-
-/* Owner badge */
 .owner-badge { background:var(--grad);-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text;
   font-size:11px;font-family:'Space Mono',monospace;font-weight:700; }
 
-/* Emoji picker */
 .emoji-picker { position:fixed;background:var(--surface);border:1px solid var(--border);
   border-radius:16px;padding:10px;display:grid;grid-template-columns:repeat(5,1fr);
   gap:4px;z-index:250;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:fadeUp .15s ease; }
@@ -233,19 +216,23 @@ input.inp::placeholder { color:var(--dim); }
   border-radius:8px;padding:4px;transition:.1s; }
 .emoji-picker button:hover { background:var(--surface2); }
 
-/* Mobile sidebar toggle */
+/* Mobile sidebar */
 @media(max-width:700px) {
   .sidebar { position:absolute;left:-100%;top:0;bottom:0;z-index:100;
     transition:left .3s ease;box-shadow:4px 0 20px rgba(0,0,0,.4); }
   .sidebar.open { left:0; }
+  .sidebar-overlay { position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.5);z-index:99;display:none; }
+  .sidebar-overlay.active { display:block; }
   #main { position:relative; }
 }
+@media(min-width:701px) { .sidebar-overlay { display:none !important; } }
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ===== AUTH ===== -->
+<!-- Auth screens -->
 <div id="authScreen">
   <div id="loginWrap" class="auth-wrap">
     <div style="text-align:center">
@@ -283,10 +270,13 @@ input.inp::placeholder { color:var(--dim); }
   </div>
 </div>
 
-<!-- ===== MAIN ===== -->
+<!-- Main interface -->
 <div id="main">
-  <!-- Sidebar -->
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
   <div class="sidebar" id="sidebar">
+    <div style="display: flex; justify-content: flex-end; padding: 8px;">
+      <button id="closeSidebarBtn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text);">✕</button>
+    </div>
     <div class="sidebar-header">
       <div class="my-profile" id="myProfile">
         <div id="myAvatar" class="avatar"></div>
@@ -309,7 +299,6 @@ input.inp::placeholder { color:var(--dim); }
     </div>
   </div>
 
-  <!-- Chat Panel -->
   <div class="chat-panel">
     <div class="chat-header">
       <button id="menuBtn" class="icon-btn" style="display:none">☰</button>
@@ -341,19 +330,36 @@ input.inp::placeholder { color:var(--dim); }
   </div>
 </div>
 
-</div><!-- #app -->
+<!-- Modal для входящего звонка -->
+<div id="incomingCallModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: var(--surface); border-radius: 20px; padding: 24px; text-align: center; max-width: 280px; margin: auto;">
+        <div style="font-size: 48px;">📞</div>
+        <div id="callerName" style="font-size: 20px; font-weight: bold; margin: 12px 0;"></div>
+        <div style="margin: 20px 0 0; display: flex; gap: 16px; justify-content: center;">
+            <button id="acceptCallBtn" style="background: #4ade80; border: none; border-radius: 40px; padding: 10px 20px; font-weight: bold;">Принять</button>
+            <button id="rejectCallBtn" style="background: #fc5c7d; border: none; border-radius: 40px; padding: 10px 20px; font-weight: bold;">Отклонить</button>
+        </div>
+    </div>
+</div>
+
+</div>
 
 <script>
 // ===== STATE =====
 let ws = null, currentUser = null, currentRole = null;
 let currentRoom = 'general';
 let onlineUsers = [];
-let roomList = []; // [{id, name}]
-let dmList = [];   // [{id, name, withUser}]
-let micOn = false, voicePeer = {}, localStream = null;
-let inVoice = false;
+let roomList = [];
+let dmList = [];
+let micOn = false, inVoice = false;
+let localStream = null;
 let typingTimer = null;
 let unread = {}, activeSearch = '';
+
+// Call state
+let pendingCall = null;
+let localStreamCall = null;
+let callPeerConnection = null;
 
 // ===== COLORS =====
 const COLORS = ['#7c5cfc','#fc5c7d','#00c6ae','#f59e0b','#3b82f6','#ec4899','#10b981','#f97316'];
@@ -455,6 +461,7 @@ function handleMsg(m) {
   if (m.type === 'init') {
     onlineUsers = m.online_users || [];
     roomList = m.rooms || [];
+    currentRole = m.role;
     buildSidebar();
     updateOnlineStatus();
   } else if (m.type === 'history') {
@@ -470,11 +477,13 @@ function handleMsg(m) {
   } else if (m.type === 'system') {
     if (m.room_id === currentRoom || !m.room_id) appendSystem(m.text);
   } else if (m.type === 'typing') {
-    const names = (m.users||[]).filter(u => u !== currentUser);
-    const bar = document.getElementById('typingBar');
-    if (names.length) {
-      bar.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div> ${names.join(', ')} печатает...`;
-    } else bar.innerHTML = '';
+    if (m.room_id === currentRoom) {
+      const typingDiv = document.getElementById('typingBar');
+      const others = (m.users||[]).filter(u => u !== currentUser);
+      if (others.length) {
+        typingDiv.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div> ${others.join(', ')} печатает...`;
+      } else typingDiv.innerHTML = '';
+    }
   } else if (m.type === 'delete') {
     if (m.room_id === currentRoom) {
       const el = document.getElementById('msg-'+m.msg_id);
@@ -511,12 +520,21 @@ function handleMsg(m) {
   } else if (m.type === 'blocked') {
     showToast(`${m.target} заблокирован`);
   } else if (m.type === 'call_offer') {
-    handleCallOffer(m);
+    if (!callPeerConnection) showIncomingCall(m.from, m.offer);
+    else wsSend({ type: 'call_reject', target: m.from });
   } else if (m.type === 'call_answer') {
-    if (voicePeer[m.from]) voicePeer[m.from].setRemoteDescription(new RTCSessionDescription(m.answer));
+    if (callPeerConnection && callPeerConnection.signalingState === 'have-local-offer') {
+      callPeerConnection.setRemoteDescription(new RTCSessionDescription(m.answer)).catch(e=>console.error(e));
+    }
   } else if (m.type === 'call_ice') {
-    const pc = voicePeer[m.from];
-    if (pc && m.candidate) pc.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(()=>{});
+    if (callPeerConnection && m.candidate) {
+      callPeerConnection.addIceCandidate(new RTCIceCandidate(m.candidate)).catch(e=>console.warn(e));
+    }
+  } else if (m.type === 'call_reject') {
+    alert(`${m.from} отклонил(а) звонок`);
+    hangUpCall();
+  } else if (m.type === 'error') {
+    alert(m.text);
   }
 }
 
@@ -535,12 +553,9 @@ function buildSidebar() {
   const list = document.getElementById('chatList');
   const q = activeSearch.toLowerCase();
   list.innerHTML = '';
-
-  // Rooms section
   const sec1 = document.createElement('div');
   sec1.className = 'sidebar-section'; sec1.innerText = 'КОМНАТЫ';
   list.appendChild(sec1);
-
   const allRooms = roomList.length ? roomList : [{id:'general',name:'Общий чат'}];
   allRooms.filter(r => !q || r.name.toLowerCase().includes(q)).forEach(r => {
     const item = makeChatItem(r.id, r.name, '💬', unread[r.id]);
@@ -548,14 +563,11 @@ function buildSidebar() {
     if (r.id === currentRoom) item.classList.add('active');
     list.appendChild(item);
   });
-
-  // DMs section
   const onlineDMs = onlineUsers.filter(u => u !== currentUser);
   if (onlineDMs.length || dmList.length) {
     const sec2 = document.createElement('div');
     sec2.className = 'sidebar-section'; sec2.innerText = 'ЛИЧНЫЕ СООБЩЕНИЯ';
     list.appendChild(sec2);
-
     const shown = new Set();
     [...dmList, ...onlineDMs.map(u => ({id: dmRoomId(u), name: u, withUser: u}))].forEach(dm => {
       const uid = dm.withUser || dm.name;
@@ -591,10 +603,6 @@ function makeChatItem(id, name, icon, badge) {
   av.style.background = avatarColor(name); av.textContent = name[0].toUpperCase();
   item.appendChild(av);
   const info = document.createElement('div'); info.className = 'chat-item-info';
-  const online = onlineUsers.filter(u => {
-    const conn = window._activeConnections && window._activeConnections[u];
-    return true; // server tracks this
-  }).length;
   info.innerHTML = `<div class="chat-item-name">${name}</div>`;
   item.appendChild(info);
   if (badge) {
@@ -611,9 +619,7 @@ function markActive(roomId) {
   });
   buildSidebar();
 }
-
 function updateSidebarUnread() { buildSidebar(); }
-
 document.getElementById('searchInp').oninput = function() {
   activeSearch = this.value; buildSidebar();
 };
@@ -625,7 +631,6 @@ function joinRoom(roomId) {
   closeSidebar();
   clearVoice();
 }
-
 function joinDM(withUser) {
   const rid = dmRoomId(withUser);
   if (!dmList.find(d => d.withUser === withUser))
@@ -633,10 +638,7 @@ function joinDM(withUser) {
   wsSend({type:'join_room', room_id: rid});
   closeSidebar();
 }
-
-function dmRoomId(user) {
-  return 'dm_' + [currentUser, user].sort().join('_');
-}
+function dmRoomId(user) { return 'dm_' + [currentUser, user].sort().join('_'); }
 
 function updateRoomHeader() {
   const isGeneral = currentRoom === 'general';
@@ -645,18 +647,14 @@ function updateRoomHeader() {
   const name = isDM
     ? currentRoom.replace('dm_','').replace('_'+currentUser,'').replace(currentUser+'_','')
     : (room ? room.name : (isGeneral ? 'Общий чат' : currentRoom));
-
   document.getElementById('chatRoomName').innerText = name;
-
   const chatAv = document.getElementById('chatAvatar');
   chatAv.style.background = avatarColor(name);
   chatAv.textContent = name[0].toUpperCase();
-
   const delBtn = document.getElementById('deleteRoomBtn');
   delBtn.style.display = (currentRole === 'owner' || (room && room.creator === currentUser)) && !isGeneral ? 'block' : 'none';
 }
 
-// ===== ONLINE STATUS =====
 function updateOnlineStatus() {
   const count = onlineUsers.length;
   document.getElementById('onlineText').innerText = `${count} в сети`;
@@ -668,10 +666,8 @@ function renderMsg(data, isHistory) {
   const wrap = document.createElement('div');
   wrap.className = `msg-wrap ${isMe ? 'me' : 'them'}`;
   wrap.id = 'msg-' + data.id;
-
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-
   if (!isMe) {
     const sender = document.createElement('div');
     sender.className = 'msg-sender';
@@ -679,25 +675,19 @@ function renderMsg(data, isHistory) {
     sender.onclick = e => { e.stopPropagation(); showProfile(data.sender); };
     bubble.appendChild(sender);
   }
-
   const txt = document.createElement('span');
   txt.innerText = data.text;
   bubble.appendChild(txt);
-
   if (data.timestamp) {
     const t = document.createElement('div'); t.className = 'msg-time';
     const d = new Date(data.timestamp);
     t.innerText = d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
     bubble.appendChild(t);
   }
-
   wrap.appendChild(bubble);
-
   if (data.reactions && Object.keys(data.reactions).length) {
     wrap.appendChild(buildReactionsEl(data.id, data.reactions));
   }
-
-  // Long press
   let pt;
   bubble.addEventListener('touchstart', () => { pt = setTimeout(() => showDeleteMenu(data.id, isMe), 500); });
   bubble.addEventListener('touchend', () => clearTimeout(pt));
@@ -706,7 +696,6 @@ function renderMsg(data, isHistory) {
   bubble.addEventListener('click', e => {
     if (e.target === bubble || e.target === txt) showReactionPicker(data.id, bubble);
   });
-
   const msgs = document.getElementById('msgs');
   msgs.appendChild(wrap);
   if (!isHistory) msgs.scrollTop = msgs.scrollHeight;
@@ -731,7 +720,6 @@ function buildReactionsEl(msgId, reactions) {
   }
   return row;
 }
-
 function updateReactions(msgId, reactions) {
   const wrap = document.getElementById('msg-'+msgId);
   if (!wrap) return;
@@ -752,7 +740,6 @@ function showDeleteMenu(msgId, isAuthor) {
     if (el) el.remove();
   }
 }
-
 function showReactionPicker(msgId, anchor) {
   document.querySelectorAll('.emoji-picker').forEach(p=>p.remove());
   const emojis = ['😍','❤️','😂','🤣','😡','👿','👍','👎','🎉','🔥','✅','😭','💀','✌️','😘','🥲','💯','🤯'];
@@ -774,22 +761,21 @@ function showReactionPicker(msgId, anchor) {
 // ===== SEND MESSAGE =====
 function sendMessage() {
   const text = document.getElementById('msgInp').value.trim();
-  if (text) { wsSend({type:'text',text}); document.getElementById('msgInp').value = ''; clearTyping(); }
+  if (text) { wsSend({type:'text', text}); document.getElementById('msgInp').value = ''; clearTyping(); }
 }
 function startTyping() {
-  wsSend({type:'typing',typing:true});
+  wsSend({type:'typing', typing:true, room_id: currentRoom});
   clearTimeout(typingTimer);
   typingTimer = setTimeout(clearTyping, 2000);
 }
-function clearTyping() { wsSend({type:'typing',typing:false}); }
-
+function clearTyping() { wsSend({type:'typing', typing:false, room_id: currentRoom}); }
 document.getElementById('msgInp').addEventListener('input', startTyping);
 document.getElementById('msgInp').addEventListener('keypress', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 document.getElementById('sendBtn').onclick = sendMessage;
 
-// ===== EMOJI INPUT =====
+// ===== EMOJI =====
 document.getElementById('emojiBtn').onclick = e => {
   e.stopPropagation();
   document.querySelectorAll('.emoji-picker').forEach(p=>p.remove());
@@ -824,32 +810,27 @@ function showProfile(username) {
   modal.querySelector('#modalAvEl').appendChild(av);
   modal.querySelector('#modalClose').onclick = () => overlay.remove();
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-
   const actions = modal.querySelector('#modalActions');
   if (!isMe) {
     const btnDM = document.createElement('button'); btnDM.className = 'modal-btn primary';
     btnDM.innerHTML = '💬 Написать'; btnDM.onclick = () => { overlay.remove(); joinDM(username); };
     actions.appendChild(btnDM);
-
     if (isOnline) {
       const btnCall = document.createElement('button'); btnCall.className = 'modal-btn secondary';
       btnCall.innerHTML = '📞 Позвонить'; btnCall.onclick = () => { overlay.remove(); startCall(username); };
       actions.appendChild(btnCall);
     }
-
     const btnBlock = document.createElement('button'); btnBlock.className = 'modal-btn danger';
     btnBlock.innerHTML = '🚫 Заблокировать'; btnBlock.onclick = () => {
       wsSend({type:'block', target:username}); overlay.remove();
     };
     actions.appendChild(btnBlock);
-
     if (currentRole === 'owner') {
       const btnKick = document.createElement('button'); btnKick.className = 'modal-btn danger';
       btnKick.innerHTML = '🔨 Кик'; btnKick.onclick = () => {
         wsSend({type:'kick', target:username}); overlay.remove();
       };
       actions.appendChild(btnKick);
-
       const btnMute = document.createElement('button'); btnMute.className = 'modal-btn danger';
       btnMute.innerHTML = '🔇 Замьютить'; btnMute.onclick = () => {
         wsSend({type:'mute', target:username}); overlay.remove();
@@ -884,7 +865,6 @@ document.getElementById('createRoomBtn').onclick = () => {
   document.getElementById('createRoomOk').onclick = doCreate;
   document.getElementById('newRoomName').onkeypress = e => { if(e.key==='Enter') doCreate(); };
 };
-
 document.getElementById('deleteRoomBtn').onclick = () => {
   if (confirm('Удалить комнату?')) wsSend({type:'delete_room', room_id: currentRoom});
 };
@@ -903,35 +883,25 @@ document.getElementById('voiceJoinBtn').onclick = async () => {
     updateMicBtn();
   } catch { alert('Нет доступа к микрофону'); }
 };
-
-document.getElementById('voiceLeaveBtn').onclick = () => {
-  clearVoice();
-  wsSend({type:'voice_leave'});
-};
-
+document.getElementById('voiceLeaveBtn').onclick = () => { clearVoice(); wsSend({type:'voice_leave'}); };
 document.getElementById('micBtn').onclick = () => {
   micOn = !micOn;
   if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = micOn);
   updateMicBtn();
-  // if turning on, create offers to all others in voice
   if (micOn) announceVoice();
 };
-
 function updateMicBtn() {
   const btn = document.getElementById('micBtn');
   btn.className = 'mic-btn ' + (micOn ? 'on' : 'off');
   btn.textContent = micOn ? '🎙️' : '🔇';
 }
-
 function clearVoice() {
   inVoice = false; micOn = false;
   if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream = null; }
-  Object.values(voicePeer).forEach(pc => pc.close());
-  voicePeer = {};
+  Object.values(voicePeer || {}).forEach(pc => pc.close());
   document.getElementById('voicePanel').style.display = 'none';
   document.getElementById('voiceUsers').innerHTML = '';
 }
-
 function updateVoicePanel(users) {
   const el = document.getElementById('voiceUsers');
   el.innerHTML = '';
@@ -942,23 +912,13 @@ function updateVoicePanel(users) {
     wrap.appendChild(name);
     el.appendChild(wrap);
   });
-  // Connect to new users via WebRTC
   users.forEach(u => {
-    if (u !== currentUser && !voicePeer[u] && inVoice) {
+    if (u !== currentUser && (!voicePeer || !voicePeer[u]) && inVoice) {
       createPeerConnection(u, true);
     }
   });
 }
-
-function announceVoice() {
-  // Offer to all in voice room
-  const voiceUsersEl = document.getElementById('voiceUsers');
-  voiceUsersEl.querySelectorAll('.voice-user').forEach(el => {
-    const name = el.querySelector('span').innerText;
-    if (name !== currentUser && !voicePeer[name]) createPeerConnection(name, true);
-  });
-}
-
+let voicePeer = {};
 async function createPeerConnection(targetUser, isInitiator) {
   const pc = new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
   voicePeer[targetUser] = pc;
@@ -979,46 +939,114 @@ async function createPeerConnection(targetUser, isInitiator) {
   }
   return pc;
 }
+function announceVoice() {
+  const voiceUsersEl = document.getElementById('voiceUsers');
+  voiceUsersEl.querySelectorAll('.voice-user').forEach(el => {
+    const name = el.querySelector('span').innerText;
+    if (name !== currentUser && (!voicePeer || !voicePeer[name])) createPeerConnection(name, true);
+  });
+}
 
-async function handleCallOffer(m) {
-  if (!inVoice) {
-    // auto-join voice to receive
-    if (navigator.mediaDevices) {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-        localStream.getAudioTracks().forEach(t => t.enabled = false);
-        inVoice = true; micOn = false;
-        document.getElementById('voicePanel').style.display = 'flex';
-        updateMicBtn();
-        wsSend({type:'voice_join'});
-      } catch {}
+// ===== CALL (Direct) =====
+async function startCall(targetUser) {
+  if (!navigator.mediaDevices) { alert('Ваш браузер не поддерживает звонки'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStreamCall = stream;
+    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    callPeerConnection = new RTCPeerConnection(config);
+    stream.getTracks().forEach(track => callPeerConnection.addTrack(track, stream));
+    callPeerConnection.ontrack = (event) => {
+      const remoteAudio = new Audio();
+      remoteAudio.srcObject = event.streams[0];
+      remoteAudio.autoplay = true;
+      remoteAudio.play().catch(e => console.warn(e));
+    };
+    callPeerConnection.onicecandidate = (event) => {
+      if (event.candidate) wsSend({ type: 'call_ice', target: targetUser, candidate: event.candidate });
+    };
+    const offer = await callPeerConnection.createOffer();
+    await callPeerConnection.setLocalDescription(offer);
+    wsSend({ type: 'call_offer', target: targetUser, offer: offer });
+    setTimeout(() => {
+      if (callPeerConnection && callPeerConnection.signalingState !== 'stable') {
+        alert('Пользователь не ответил');
+        hangUpCall();
+      }
+    }, 30000);
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось начать звонок');
+  }
+}
+function showIncomingCall(from, offer) {
+  pendingCall = { from, offer };
+  const modal = document.getElementById('incomingCallModal');
+  document.getElementById('callerName').innerText = from;
+  modal.style.display = 'flex';
+  const acceptBtn = document.getElementById('acceptCallBtn');
+  const rejectBtn = document.getElementById('rejectCallBtn');
+  const newAccept = acceptBtn.cloneNode(true);
+  const newReject = rejectBtn.cloneNode(true);
+  acceptBtn.parentNode.replaceChild(newAccept, acceptBtn);
+  rejectBtn.parentNode.replaceChild(newReject, rejectBtn);
+  newAccept.onclick = async () => {
+    modal.style.display = 'none';
+    await acceptCall(from, offer);
+  };
+  newReject.onclick = () => {
+    modal.style.display = 'none';
+    wsSend({ type: 'call_reject', target: from });
+    pendingCall = null;
+  };
+}
+async function acceptCall(from, offer) {
+  try {
+    if (!navigator.mediaDevices) throw new Error('Нет доступа');
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStreamCall = stream;
+    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const pc = new RTCPeerConnection(config);
+    callPeerConnection = pc;
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    pc.ontrack = (event) => {
+      const remoteAudio = new Audio();
+      remoteAudio.srcObject = event.streams[0];
+      remoteAudio.autoplay = true;
+      remoteAudio.play().catch(e => console.warn(e));
+    };
+    pc.onicecandidate = (event) => {
+      if (event.candidate) wsSend({ type: 'call_ice', target: from, candidate: event.candidate });
+    };
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    wsSend({ type: 'call_answer', target: from, answer: answer });
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось ответить на звонок');
+    wsSend({ type: 'call_reject', target: from });
+  }
+}
+function hangUpCall() {
+  if (callPeerConnection) { callPeerConnection.close(); callPeerConnection = null; }
+  if (localStreamCall) { localStreamCall.getTracks().forEach(t => t.stop()); localStreamCall = null; }
+  pendingCall = null;
+}
+document.getElementById('incomingCallModal').addEventListener('click', (e) => {
+  if (e.target.id === 'incomingCallModal') {
+    document.getElementById('incomingCallModal').style.display = 'none';
+    if (pendingCall) {
+      wsSend({ type: 'call_reject', target: pendingCall.from });
+      pendingCall = null;
     }
   }
-  const pc = await createPeerConnection(m.from, false);
-  await pc.setRemoteDescription(new RTCSessionDescription(m.offer));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  wsSend({type:'call_answer', target:m.from, answer});
-}
-
-async function startCall(targetUser) {
-  if (!navigator.mediaDevices) { alert('Браузер не поддерживает аудио'); return; }
-  try {
-    if (!localStream) {
-      localStream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      micOn = true;
-      inVoice = true;
-      document.getElementById('voicePanel').style.display = 'flex';
-      updateMicBtn();
-      wsSend({type:'voice_join'});
-    }
-    createPeerConnection(targetUser, true);
-  } catch { alert('Нет доступа к микрофону'); }
-}
+});
 
 // ===== LOGOUT =====
 function logout() {
   clearVoice();
+  hangUpCall();
   if (ws) { ws.close(); ws = null; }
   localStorage.removeItem('burmalda_user');
   currentUser = null; currentRole = null; currentRoom = 'general';
@@ -1034,36 +1062,26 @@ function logout() {
 document.getElementById('logoutBtn').onclick = logout;
 
 // ===== MOBILE SIDEBAR =====
-document.getElementById('menuBtn').onclick = () => {
-  document.getElementById('sidebar').classList.toggle('open');
-};
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-}
-function checkMobile() {
-  const isMobile = window.innerWidth <= 700;
-  document.getElementById('menuBtn').style.display = isMobile ? 'block' : 'none';
-}
+function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('active'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); }
+document.getElementById('menuBtn').onclick = openSidebar;
+document.getElementById('closeSidebarBtn').onclick = closeSidebar;
+document.getElementById('sidebarOverlay').onclick = closeSidebar;
+let touchStartX = 0;
+document.getElementById('sidebar').addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.getElementById('sidebar').addEventListener('touchmove', (e) => { if (e.touches[0].clientX - touchStartX < -50) closeSidebar(); });
+function checkMobile() { document.getElementById('menuBtn').style.display = window.innerWidth <= 700 ? 'block' : 'none'; }
 window.addEventListener('resize', checkMobile); checkMobile();
 
-// ===== TOAST =====
 function showToast(msg) {
   const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
-    'background:var(--surface);border:1px solid var(--border);border-radius:12px;' +
-    'padding:10px 20px;font-size:14px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.3);' +
-    'animation:fadeUp .2s ease;';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 20px;font-size:14px;z-index:400;box-shadow:0 4px 16px rgba(0,0,0,.3);animation:fadeUp .2s ease;';
   t.innerText = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
 }
-
-// ===== UNREAD =====
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) {
-    unread[currentRoom] = 0; document.title = 'BurmaldaMessenger';
-    updateSidebarUnread();
-  }
+  if (!document.hidden) { unread[currentRoom] = 0; document.title = 'BurmaldaMessenger'; updateSidebarUnread(); }
 });
 </script>
 </body>
