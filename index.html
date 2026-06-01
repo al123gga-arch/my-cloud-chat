@@ -3,54 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseChat</title>
+    <title>BurmaldaMessenger</title>
     <style>
-        body { background: #0f172a; color: #fff; font-family: sans-serif; margin: 0; display: flex; justify-content: center; height: 100vh; }
-        .app { width: 100%; max-width: 400px; display: flex; flex-direction: column; height: 100%; background: #1e293b; }
+        :root { --border-gradient: linear-gradient(45deg, #ff0055, #8800ff, #00d2ff); }
+        body { background: #050505; color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 8px 12px; border-radius: 12px; background: #334155; }
-        .my { align-self: flex-end; background: #38bdf8; color: #0f172a; }
-        .sender { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
-        .sys { align-self: center; font-size: 11px; color: #64748b; padding: 5px; }
-
-        .controls { padding: 10px; background: #0f172a; display: flex; gap: 8px; }
-        input { flex: 1; padding: 10px; border-radius: 8px; border: none; background: #1e293b; color: white; }
-        button { padding: 8px 16px; border-radius: 8px; border: none; background: #38bdf8; cursor: pointer; }
+        /* Рамка-переливайка */
+        .wrapper { position: relative; width: 400px; height: 600px; background: #111; border-radius: 20px; overflow: hidden; padding: 2px; }
+        .wrapper::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: var(--border-gradient); animation: rotate 4s linear infinite; }
+        .content { position: relative; width: 100%; height: 100%; background: #111; border-radius: 18px; display: flex; flex-direction: column; }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+        
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 15px; background: #222; border-radius: 12px; max-width: 80%; }
+        .my { align-self: flex-end; background: #444; }
+        
+        .input-area { padding: 15px; background: #1a1a1a; display: flex; gap: 10px; align-items: center; }
+        input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #444; background: #000; color: white; }
+        button { padding: 10px; border-radius: 10px; border: none; background: #444; color: white; cursor: pointer; }
+        
+        /* Смайлики */
+        #emoji-menu { display: none; padding: 10px; background: #111; grid-template-columns: repeat(6, 1fr); gap: 5px; }
     </style>
 </head>
 <body>
-<div class="app" id="login">
-    <div style="margin: auto; text-align: center;">
-        <h1>PulseChat</h1>
-        <input type="text" id="user" placeholder="Твой никнейм"><br><br>
-        <button onclick="join()">Войти в чат</button>
+
+<div class="wrapper" id="auth">
+    <div class="content" style="justify-content:center; align-items:center; gap:20px;">
+        <h1>BurmaldaMessenger</h1>
+        <input type="text" id="user" placeholder="Твой ник..." style="width:70%;">
+        <button onclick="join()">Войти</button>
     </div>
 </div>
-<div class="app" id="chat" style="display:none;">
-    <div id="messages"></div>
-    <div class="controls">
-        <input type="text" id="msg" placeholder="Сообщение...">
-        <button onclick="send()">➤</button>
+
+<div class="wrapper" id="chat" style="display:none;">
+    <div class="content">
+        <div id="messages"></div>
+        <div id="emoji-menu"></div>
+        <div class="input-area">
+            <button onclick="toggleEmoji()">😊</button>
+            <input type="text" id="msg" placeholder="Сообщение..." onkeypress="if(event.key==='Enter') send()">
+            <button onclick="send()">➤</button>
+        </div>
     </div>
 </div>
+
 <script>
-    let ws, name;
+    let ws, myName;
+    const emojis = ["😀", "😂", "🥰", "😎", "🤔", "🔥", "👍", "❤️", "💀", "🚀", "🎉", "😱"];
+    const emDiv = document.getElementById("emoji-menu");
+    
+    emojis.forEach(e => {
+        let s = document.createElement("span"); s.innerText = e; s.style.cursor="pointer";
+        s.onclick = () => document.getElementById("msg").value += e;
+        emDiv.appendChild(s);
+    });
+
+    function toggleEmoji() { emDiv.style.display = emDiv.style.display === 'grid' ? 'none' : 'grid'; }
+
     function join() {
-        name = document.getElementById("user").value;
-        if(!name) return;
-        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}/ws/${name}`);
-        ws.onopen = () => { document.getElementById("login").style.display="none"; document.getElementById("chat").style.display="flex"; };
+        myName = document.getElementById("user").value;
+        if(!myName) return;
+        ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss://' : 'ws://'}${window.location.host}/ws/${myName}`);
+        ws.onopen = () => { document.getElementById("auth").style.display="none"; document.getElementById("chat").style.display="block"; };
         ws.onmessage = (e) => {
             const p = e.data.split(':');
-            const div = document.createElement("div");
-            if(p[0] === "СИСТЕМА") { div.className = "sys"; div.innerText = p[1]; }
-            else { 
-                div.className = "msg " + (p[0] === name ? "my" : "");
-                div.innerHTML = `<div class="sender">${p[0]}</div><div>${p.slice(1).join(':')}</div>`;
-            }
-            document.getElementById("messages").appendChild(div);
-            document.getElementById("messages").scrollTop = 9999;
+            const d = document.createElement("div");
+            d.className = "msg " + (p[0] === myName ? "my" : "");
+            d.innerText = p[0] + ": " + p.slice(1).join(':');
+            document.getElementById("messages").appendChild(d);
         };
     }
     function send() {
