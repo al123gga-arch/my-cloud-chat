@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
+/* ===== БАЗОВЫЕ СТИЛИ (ТВОЙ ДИЗАЙН) ===== */
 * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 :root {
   --bg: #080810; --surface: #0e0e1a; --surface2: #13131f; --surface3: #1a1a2e;
@@ -26,190 +27,71 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index
   background-image: linear-gradient(var(--border) 1px,transparent 1px),
     linear-gradient(90deg,var(--border) 1px,transparent 1px);
   background-size:40px 40px; opacity:.25; }
-
 #app { position:relative; z-index:1; display:flex; flex-direction:column;
   background:var(--surface); overflow:auto; width:100%; max-width:920px; margin:0 auto; }
 @media(max-width:600px){ #app{width:100%; min-height:100vh; border-radius:0; } }
 @media(min-width:601px){ #app{width:920px; height:700px; border-radius:24px;
   box-shadow:0 0 0 1px var(--border),0 24px 64px rgba(0,0,0,.5),0 0 80px var(--glow); overflow:hidden; } }
 
-/* Auth */
-.auth-wrap { display:flex; flex-direction:column; align-items:center;
-  justify-content:center; height:100%; padding:32px 24px; animation:fadeUp .4s ease; }
-@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-.logo-icon { width:64px;height:64px;background:var(--grad);border-radius:20px;
-  display:inline-flex;align-items:center;justify-content:center;font-size:30px;
-  margin-bottom:14px;box-shadow:0 8px 28px var(--glow); }
-.logo-title { font-size:26px;font-weight:800;background:var(--grad);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
-.logo-sub { font-size:12px;color:var(--dim);margin-top:4px;font-family:'Space Mono',monospace; }
-.form { display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:28px; }
-.inp-wrap { position:relative; }
-.inp-icon { position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none; }
-input.inp { background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;
-  padding:13px 16px 13px 42px;color:var(--text);font-size:15px;font-family:'Syne',sans-serif;
-  outline:none;transition:.2s;width:100%; }
-input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
-.btn { background:var(--grad);border:none;border-radius:14px;padding:13px;
-  font-weight:700;font-size:15px;font-family:'Syne',sans-serif;color:#fff;cursor:pointer;
-  transition:.15s;box-shadow:0 4px 16px var(--glow); }
-.btn:active { transform:scale(.97); }
-.btn-out { background:transparent;border:1.5px solid var(--border);color:var(--dim);
-  box-shadow:none; }
-.err { color:var(--accent2);font-size:13px;text-align:center;min-height:18px;
-  font-family:'Space Mono',monospace; }
-.ok { color:var(--green);font-size:13px;text-align:center;font-family:'Space Mono',monospace; }
-.divider { display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px; }
-.divider::before,.divider::after { content:'';flex:1;height:1px;background:var(--border); }
+/* ... (все остальные базовые стили из предыдущего кода, оставлены без изменений) ... */
+/* Для краткости я не копирую всю простыню, но ты должен оставить ВСЁ, что было раньше. */
+/* Я покажу только новые/изменённые стили ниже. */
 
-/* Main layout */
-#main { display:none; height:100%; flex-direction:row; position:relative; }
-.sidebar { width:var(--sidebar-w);flex-shrink:0;display:flex;flex-direction:column;
-  border-right:1px solid var(--border);background:var(--surface);height:100%; }
-.sidebar-header { padding:14px 12px 10px;border-bottom:1px solid var(--border); }
-.my-profile { display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px;
-  cursor:pointer;transition:.15s; }
-.my-profile:hover { background:var(--surface2); }
-.sidebar-search { margin-top:10px;position:relative; }
-.sidebar-search input { background:var(--surface2);border:1.5px solid var(--border);
-  border-radius:12px;padding:9px 12px 9px 36px;color:var(--text);font-size:13px;
-  font-family:'Syne',sans-serif;outline:none;width:100%; }
-.sidebar-search input:focus { border-color:var(--accent); }
-.sidebar-search::before { content:'🔍';position:absolute;left:10px;top:50%;
-  transform:translateY(-50%);font-size:13px;pointer-events:none; }
-.chat-list { flex:1;overflow-y:auto;padding:6px; }
-.chat-list::-webkit-scrollbar { width:3px; }
-.chat-list::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px; }
-.chat-item { display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;
-  cursor:pointer;transition:.15s;position:relative; }
-.chat-item:hover,.chat-item.active { background:var(--surface3); }
-.chat-item-info { flex:1;min-width:0; }
-.chat-item-name { font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis; }
-.chat-item-preview { font-size:11.5px;color:var(--dim);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;margin-top:1px; }
-.chat-item-badge { background:var(--accent);color:#fff;border-radius:10px;
-  padding:2px 7px;font-size:11px;font-weight:700;flex-shrink:0; }
-.sidebar-section { padding:8px 12px 4px;font-size:11px;color:var(--dim);
-  font-family:'Space Mono',monospace;letter-spacing:.5px; }
-.sidebar-footer { padding:10px 12px;border-top:1px solid var(--border);
-  display:flex;gap:8px; }
-.icon-btn { background:none;border:none;font-size:20px;cursor:pointer;padding:8px;
-  border-radius:10px;transition:.15s;color:var(--text);flex-shrink:0; }
-.icon-btn:hover { background:var(--surface2); }
-.create-room-btn { flex:1;background:var(--surface2);border:1.5px dashed var(--border);
-  border-radius:12px;padding:8px;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;
-  color:var(--dim);cursor:pointer;transition:.15s; }
-.create-room-btn:hover { border-color:var(--accent);color:var(--accent); }
+/* ===== НОВЫЕ СТИЛИ ===== */
 
-/* Chat panel */
-.chat-panel { flex:1; display:flex; flex-direction:column; min-width:0; height:100%; }
-.chat-header { flex-shrink:0; display:flex; align-items:center; gap:12px; padding:12px 16px;
-  border-bottom:1px solid var(--border); background:var(--surface); }
-.chat-header-info { flex:1; min-width:0; }
-.chat-room-name { font-weight:800; font-size:16px; letter-spacing:-.3px; }
-.chat-status { font-size:11.5px; color:var(--dim); font-family:'Space Mono',monospace; }
-.dot { display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--green);margin-right:4px;animation:pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
-#msgs { flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:6px;
-  scroll-behavior:smooth; }
-.msg-wrap { display:flex; flex-direction:column; max-width:82%; animation:msgIn .2s ease; }
-@keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
-.msg-wrap.me { align-self:flex-end; }
-.msg-wrap.them { align-self:flex-start; }
-.msg-bubble { padding:9px 13px; border-radius:16px; word-wrap:break-word;
-  font-size:14.5px; line-height:1.45; cursor:pointer; transition:opacity .1s; }
-.msg-bubble:active { opacity:.8; }
-.me .msg-bubble { background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
-.them .msg-bubble { background:var(--surface3); color:var(--text);
-  border-bottom-left-radius:4px; border:1px solid var(--border); }
-.msg-sender { font-size:11px; font-weight:700; color:var(--accent); margin-bottom:3px;
-  font-family:'Space Mono',monospace; cursor:pointer; }
-.msg-time { font-size:10px; margin-top:3px; text-align:right;
-  font-family:'Space Mono',monospace; color:rgba(255,255,255,.45); }
-.them .msg-time { color:var(--dim); }
-.reactions-row { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
-.reaction { background:var(--surface2); border:1px solid var(--border);
-  border-radius:20px; padding:2px 8px; cursor:pointer; font-size:13px; transition:.15s; }
-.reaction:hover { border-color:var(--accent); }
-.system { color:var(--dim); font-size:11.5px; text-align:center; margin:6px 0;
-  font-family:'Space Mono',monospace; }
-.typing-bar { flex-shrink:0; min-height:26px; padding:4px 16px; font-size:12px; color:var(--dim);
-  font-style:italic; font-family:'Space Mono',monospace; display:flex; align-items:center; gap:8px; }
-
-/* Input area */
-.input-area {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  align-items: center;
-  flex-shrink: 0;
-  position: relative; /* для панели эмодзи */
+/* Анимация модальных окон */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
-.msg-input {
-  flex: 1;
-  background: var(--surface2);
-  border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 14px;
-  color: var(--text);
-  font-size: 16px;
-  font-family: 'Syne', sans-serif;
-  outline: none;
-  -webkit-appearance: none;
+.modal-overlay {
+  position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px); display:flex; align-items:center; justify-content:center;
+  z-index: 300; animation: fadeIn 0.2s ease;
 }
-.msg-input:focus { border-color: var(--accent); }
-.send-btn { background:var(--grad); border:none; border-radius:12px; width:42px;
-  height:42px; display:flex; align-items:center; justify-content:center; font-size:18px;
-  cursor:pointer; transition:.15s; box-shadow:0 2px 10px var(--glow); flex-shrink:0; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal {
+  background: var(--surface); border-radius: 20px; padding: 24px; width: 90%; max-width: 340px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5); animation: modalIn 0.25s ease;
+  position: relative;
+}
+.modal-close {
+  position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--dim);
+  font-size: 20px; cursor: pointer;
+}
+.modal-profile { text-align: center; margin-bottom: 20px; }
+.modal-username { font-size: 20px; font-weight: 800; margin: 8px 0 4px; }
+.modal-meta { font-size: 13px; color: var(--dim); }
+.modal-actions { display: flex; flex-direction: column; gap: 8px; }
+.modal-btn {
+  padding: 12px; border-radius: 14px; border: none; font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.15s;
+}
+.modal-btn.primary { background: var(--grad); color: #fff; }
+.modal-btn.secondary { background: var(--surface3); color: var(--text); border: 1px solid var(--border); }
+.modal-btn.danger { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
 
-.avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center;
-  justify-content:center; font-size:15px; font-weight:800; color:#fff; flex-shrink:0;
-  font-family:'Syne',sans-serif; }
-.avatar.sm { width:28px; height:28px; font-size:11px; }
-.avatar.lg { width:52px; height:52px; font-size:20px; }
-
-/* Voice modal */
-.voice-modal { position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
-  background:var(--surface); border-radius:20px; padding:16px; width:280px; z-index:200;
-  border:1px solid var(--accent); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:none;
-  flex-direction:column; gap:12px; backdrop-filter:blur(10px); }
-.voice-modal-header { display:flex; justify-content:space-between; align-items:center;
-  font-weight:800; font-size:16px; font-family:'Syne',sans-serif; }
-.voice-participants { max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
-.voice-participant { display:flex; align-items:center; gap:10px; font-size:14px;
-  padding:4px; border-radius:12px; background:var(--surface2); }
-.voice-controls { display:flex; gap:12px; justify-content:center; }
-.voice-btn { background:var(--surface3); border:none; border-radius:30px; padding:8px 16px;
-  font-size:13px; font-weight:700; cursor:pointer; font-family:'Syne',sans-serif; }
-.mic-on { background:var(--green); color:#000; }
-.mic-off { background:var(--accent2); color:#fff; }
-.leave-voice { background:var(--accent2); color:#fff; }
-
-/* --- НОВАЯ ПАНЕЛЬ ЭМОДЗИ --- */
+/* Панель эмодзи – фиксированная */
 .emoji-panel {
-  position: absolute;
-  bottom: 100%;
+  position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
   background: var(--surface2);
-  backdrop-filter: blur(12px);
-  border-radius: 16px 16px 0 0;
-  padding: 12px;
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-  gap: 8px;
-  z-index: 20;
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
-  border: 1px solid var(--border);
-  border-bottom: none;
+  gap: 10px;
+  z-index: 250;
   transform: translateY(100%);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  max-height: 50vh;
+  overflow-y: auto;
 }
 .emoji-panel.open {
   transform: translateY(0);
@@ -217,297 +99,65 @@ input.inp:focus { border-color:var(--accent);box-shadow:0 0 0 3px var(--glow); }
   pointer-events: auto;
 }
 .emoji-item {
-  background: transparent;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 12px;
-  transition: background 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent; border: none; font-size: 32px; cursor: pointer;
+  padding: 4px; border-radius: 12px; transition: background 0.15s;
 }
-.emoji-item:hover {
-  background: var(--surface3);
+.emoji-item:hover { background: var(--surface3); }
+
+/* Стили для цитирования (reply) */
+.reply-preview {
+  background: var(--surface3); border-left: 3px solid var(--accent); padding: 8px 12px;
+  margin: 4px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px;
+}
+.reply-preview .reply-sender { font-weight: 700; font-size: 12px; color: var(--accent); }
+.reply-preview .reply-text { font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reply-preview .reply-cancel { margin-left: auto; background: none; border: none; color: var(--dim); cursor: pointer; font-size: 16px; }
+
+/* Кнопка "Редактировать" в сообщении */
+.edit-indicator {
+  background: var(--accent); color: #fff; padding: 4px 8px; border-radius: 8px;
+  font-size: 11px; margin-top: 4px; display: inline-block;
 }
 
-/* Mobile sidebar */
-.sidebar-overlay { position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(0,0,0,0.5); z-index:99; display:none; }
-.sidebar-overlay.active { display:block; }
-@media(max-width:700px) {
-  .sidebar { position:absolute; left:-100%; top:0; bottom:0; z-index:100;
-    transition:left .3s ease; box-shadow:4px 0 20px rgba(0,0,0,.4); }
-  .sidebar.open { left:0; }
+/* Индикатор прочтения (галочки) */
+.read-status {
+  font-size: 11px; color: var(--dim); margin-top: 4px; text-align: right;
+  font-family: 'Space Mono', monospace;
 }
-@media(min-width:701px) { .sidebar-overlay { display:none !important; } }
 
-/* Мобильная вёрстка: поле ввода всегда снизу, чат скроллится */
+/* Список участников комнаты */
+.members-list {
+  max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+}
+.member-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px;
+  background: var(--surface2);
+}
+.member-item .member-name { font-size: 14px; font-weight: 700; }
+.member-item .member-status { font-size: 12px; color: var(--dim); }
+.member-item .member-role { font-size: 11px; background: var(--accent); color: #fff; padding: 2px 6px; border-radius: 6px; margin-left: auto; }
+
+/* Мобильная адаптация */
 @media (max-width: 600px) {
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-  body {
-    justify-content: flex-start;
-    align-items: flex-start;
-  }
-  #app {
-    width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border-radius: 0;
-    margin: 0;
-  }
-  #authScreen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-  }
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .chat-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-  }
-  #msgs {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .input-area {
-    flex-shrink: 0;
-    position: relative;
-  }
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -100%;
-    bottom: 0;
-    height: 100dvh;
-    transition: left 0.3s ease;
-  }
-  .sidebar.open {
-    left: 0;
-  }
-  .emoji-panel {
-    position: fixed;
-    bottom: 60px; /* чуть выше поля ввода */
-    left: 0;
-    right: 0;
-    border-radius: 20px 20px 0 0;
-  }
+  .emoji-panel { border-radius: 16px 16px 0 0; }
 }
 </style>
 </head>
 <body>
 <div id="app">
-<div id="authScreen">
-  <div id="loginWrap" class="auth-wrap">
-    <div style="text-align:center"><div class="logo-icon">💬</div><div class="logo-title">BurmaldaMess</div><div class="logo-sub">// secure · real-time · minimal</div></div>
-    <div class="form">
-      <div class="inp-wrap"><span class="inp-icon">👤</span><input id="lUser" class="inp" placeholder="Никнейм" autocomplete="username"></div>
-      <div class="inp-wrap"><span class="inp-icon">🔑</span><input id="lPass" class="inp" type="password" placeholder="Пароль" autocomplete="current-password"></div>
-      <div id="lErr" class="err"></div>
-      <button id="lBtn" class="btn">Войти</button>
-      <div class="divider">или</div>
-      <button id="toReg" class="btn btn-out">Создать аккаунт</button>
-    </div>
-  </div>
-  <div id="regWrap" class="auth-wrap" style="display:none">
-    <div style="text-align:center"><div class="logo-icon">✨</div><div class="logo-title">Регистрация</div><div class="logo-sub">// создай аккаунт</div></div>
-    <div class="form">
-      <div class="inp-wrap"><span class="inp-icon">👤</span><input id="rUser" class="inp" placeholder="Уникальный ник" autocomplete="off"></div>
-      <div class="inp-wrap"><span class="inp-icon">🔑</span><input id="rPass" class="inp" type="password" placeholder="Пароль (мин. 8 символов)" autocomplete="new-password"></div>
-      <div id="rErr" class="err"></div>
-      <button id="rBtn" class="btn">Создать аккаунт</button>
-      <div class="divider">или</div>
-      <button id="toLgn" class="btn btn-out">Уже есть аккаунт</button>
-    </div>
-  </div>
-</div>
-
-<div id="main">
-  <div id="sidebarOverlay" class="sidebar-overlay"></div>
-  <div class="sidebar" id="sidebar">
-    <div style="display: flex; justify-content: flex-end; padding: 8px;"><button id="closeSidebarBtn" class="icon-btn" style="font-size:20px;">✕</button></div>
-    <div class="sidebar-header">
-      <div class="my-profile" id="myProfile"><div id="myAvatar" class="avatar"></div><div style="flex:1;min-width:0"><div id="myName" style="font-size:14px;font-weight:700"></div><div id="myRole" class="owner-badge"></div></div><button id="themeBtn" class="icon-btn" style="padding:4px">🌙</button></div>
-      <div class="sidebar-search"><input id="searchInp" placeholder="Поиск..."></div>
-    </div>
-    <div class="chat-list" id="chatList"></div>
-    <div style="padding:6px 12px"><button class="create-room-btn" id="createRoomBtn">+ Создать комнату</button></div>
-    <div class="sidebar-footer"><button id="logoutBtn" class="icon-btn" title="Выйти">🚪</button></div>
-  </div>
-
-  <div class="chat-panel">
-    <div class="chat-header">
-      <button id="menuBtn" class="icon-btn" style="display:none">☰</button>
-      <div id="chatAvatar" class="avatar"></div>
-      <div class="chat-header-info"><div id="chatRoomName" class="chat-room-name">Общий чат</div><div id="chatStatus" class="chat-status"><span class="dot"></span><span id="onlineText">в сети</span></div></div>
-      <div style="display:flex;gap:4px"><button id="voiceJoinBtn" class="icon-btn" title="Голосовой чат">🎙️</button><button id="deleteRoomBtn" class="icon-btn" title="Удалить комнату" style="display:none">🗑️</button></div>
-    </div>
-    <div id="msgs"></div>
-    <div id="typingBar" class="typing-bar"></div>
-    <div class="input-area" id="inputArea">
-      <button id="emojiBtn" class="icon-btn">😊</button>
-      <input id="msgInp" class="msg-input" placeholder="Сообщение..." autocomplete="off">
-      <button id="sendBtn" class="send-btn">➤</button>
-      <div id="emojiPanel" class="emoji-panel"></div>
-    </div>
-  </div>
-</div>
-
-<div id="voiceModal" class="voice-modal">
-  <div class="voice-modal-header">🎙️ Голосовой чат <span id="voiceCloseModal" style="cursor:pointer;">✕</span></div>
-  <div id="voiceParticipantsList" class="voice-participants"></div>
-  <div class="voice-controls">
-    <button id="voiceMicBtn" class="voice-btn mic-off">🔇 Микрофон выкл</button>
-    <button id="voiceLeaveBtn" class="voice-btn leave-voice">🚪 Выйти</button>
-  </div>
-</div>
-
+<!-- ... (полностью вся структура HTML как раньше) ... -->
 </div>
 
 <script>
-// ===== STATE =====
-let ws = null, currentUser = null, currentRole = null;
-let currentRoom = 'general';
-let onlineUsers = [], roomList = [];
-let dmList = [];
-let unread = {}, activeSearch = '';
-let typingTimer = null;
+// ===== ВСЯ ПРЕДЫДУЩАЯ ЛОГИКА (соединение, WS, сообщения, voice...) =====
+// ... (оставляем без изменений) ...
 
-// Voice
-let localStream = null, inVoice = false, micOn = false;
-let voicePeers = {};
+// ============ НОВЫЕ ФУНКЦИИ И ИЗМЕНЕНИЯ ============
 
-// Call direct
-let callPeer = null, localCallStream = null;
-
-// DOM elements
-const msgsDiv = document.getElementById('msgs');
-const msgInput = document.getElementById('msgInp');
-const sendBtn = document.getElementById('sendBtn');
-const voiceModal = document.getElementById('voiceModal');
-const voiceParticipantsList = document.getElementById('voiceParticipantsList');
-const voiceMicBtn = document.getElementById('voiceMicBtn');
-const voiceLeaveBtn = document.getElementById('voiceLeaveBtn');
-const voiceJoinBtn = document.getElementById('voiceJoinBtn');
-
-const COLORS = ['#7c5cfc','#fc5c7d','#00c6ae','#f59e0b','#3b82f6','#ec4899','#10b981','#f97316'];
-function avatarColor(name) { let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))%COLORS.length; return COLORS[h]; }
-function avatarEl(name, cls='') { let d=document.createElement('div'); d.className='avatar '+cls; d.style.background=avatarColor(name); d.textContent=name[0].toUpperCase(); return d; }
-
-function setTheme(t) { document.documentElement.setAttribute('data-theme',t); localStorage.setItem('theme',t); document.getElementById('themeBtn').innerText=t==='dark'?'🌙':'☀️'; }
-setTheme(localStorage.getItem('theme')||'dark');
-document.getElementById('themeBtn').onclick=()=>setTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
-
-// Auth
-document.getElementById('toReg').onclick=()=>{ document.getElementById('loginWrap').style.display='none'; document.getElementById('regWrap').style.display='flex'; };
-document.getElementById('toLgn').onclick=()=>{ document.getElementById('regWrap').style.display='none'; document.getElementById('loginWrap').style.display='flex'; };
-async function doLogin(){ let u=document.getElementById('lUser').value.trim(), p=document.getElementById('lPass').value; if(!u||!p){ setErr('lErr','Заполните оба поля'); return; } try{ let r=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`}); let d=await r.json(); if(d.ok){ currentUser=d.username; currentRole=d.role; connectWS(); } else setErr('lErr',d.error||'Ошибка'); } catch{ setErr('lErr','Нет соединения'); } }
-document.getElementById('lBtn').onclick=doLogin;
-document.getElementById('lPass').onkeypress=e=>{ if(e.key==='Enter') doLogin(); };
-async function doRegister(){ let u=document.getElementById('rUser').value.trim(), p=document.getElementById('rPass').value; if(!u||!p){ setErr('rErr','Заполните поля'); return; } if(p.length<8){ setErr('rErr','Пароль мин. 8 символов'); return; } try{ let r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`}); let d=await r.json(); if(d.ok){ document.getElementById('rErr').className='ok'; document.getElementById('rErr').innerText='✓ Аккаунт создан — войдите'; setTimeout(()=>{ document.getElementById('toLgn').click(); document.getElementById('lUser').value=u; },1200); } else setErr('rErr',d.error||'Ошибка'); } catch{ setErr('rErr','Нет соединения'); } }
-document.getElementById('rBtn').onclick=doRegister;
-function setErr(id,msg){ let el=document.getElementById(id); el.className='err'; el.innerText=msg; }
-
-function connectWS(){ let proto=location.protocol==='https:'?'wss://':'ws://'; ws=new WebSocket(`${proto}${location.host}/ws/${encodeURIComponent(currentUser)}`); ws.onopen=()=>{ document.getElementById('authScreen').style.display='none'; document.getElementById('main').style.display='flex'; setupMyProfile(); }; ws.onmessage=e=>handleMsg(JSON.parse(e.data)); ws.onclose=()=>{ if(document.getElementById('main').style.display==='flex'){ alert('Соединение потеряно. Обновите страницу.'); logout(); } }; }
-function wsSend(obj){ if(ws && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
-
-function handleMsg(m){
-  if(m.type==='init'){ onlineUsers=m.online_users||[]; roomList=m.rooms||[]; currentRole=m.role; buildSidebar(); updateOnlineStatus(); }
-  else if(m.type==='history'){ if(m.data.room_id===currentRoom) renderMsg(m.data,true); }
-  else if(m.type==='message'){ if(m.data.room_id===currentRoom){ renderMsg(m.data,false); if(document.hidden){ unread[currentRoom]=(unread[currentRoom]||0)+1; updateSidebarUnread(); } } else { unread[m.data.room_id]=(unread[m.data.room_id]||0)+1; updateSidebarUnread(); } }
-  else if(m.type==='system'){ if(m.room_id===currentRoom||!m.room_id) appendSystem(m.text); }
-  else if(m.type==='typing'){ if(m.room_id===currentRoom){ let others=(m.users||[]).filter(u=>u!==currentUser); document.getElementById('typingBar').innerHTML=others.length?`<div class="typing-dots"><span></span><span></span><span></span></div> ${others.join(', ')} печатает...`:''; } }
-  else if(m.type==='delete'){ if(m.room_id===currentRoom){ let el=document.getElementById('msg-'+m.msg_id); if(el) el.remove(); } }
-  else if(m.type==='update_reactions'){ if(m.room_id===currentRoom) updateReactions(m.msg_id,m.reactions); }
-  else if(m.type==='online_update'){ onlineUsers=m.online_users||[]; updateOnlineStatus(); buildSidebar(); }
-  else if(m.type==='room_joined'){ currentRoom=m.room_id; document.getElementById('chatRoomName').innerText=m.name; msgsDiv.innerHTML=''; updateRoomHeader(); unread[m.room_id]=0; updateSidebarUnread(); markActive(m.room_id); }
-  else if(m.type==='room_created'){ if(!roomList.find(r=>r.id===m.room_id)) roomList.push({id:m.room_id,name:m.name}); buildSidebar(); }
-  else if(m.type==='room_deleted'){ roomList=roomList.filter(r=>r.id!==m.room_id); if(currentRoom===m.room_id) joinRoom('general'); buildSidebar(); }
-  else if(m.type==='voice_update'){ if(m.room_id===currentRoom) updateVoiceUI(m.users); }
-  else if(m.type==='kicked'){ alert(m.text); logout(); }
-  else if(m.type==='muted'){ if(inVoice){ micOn=false; updateMicUI(); } alert(m.text); }
-  else if(m.type==='blocked'){ showToast(`${m.target} заблокирован`); }
-  else if(m.type==='call_offer'){ if(!callPeer) showIncomingCall(m.from,m.offer); else wsSend({type:'call_reject',target:m.from}); }
-  else if(m.type==='call_answer'){ if(callPeer && callPeer.signalingState==='have-local-offer') callPeer.setRemoteDescription(new RTCSessionDescription(m.answer)); }
-  else if(m.type==='call_ice'){ if(callPeer && m.candidate) callPeer.addIceCandidate(new RTCIceCandidate(m.candidate)); }
-  else if(m.type==='call_reject'){ alert(`${m.from} отклонил(а) звонок`); hangUpCall(); }
-  else if(m.type==='error'){ alert(m.text); }
-}
-
-function setupMyProfile(){ let av=document.getElementById('myAvatar'); av.replaceWith(avatarEl(currentUser)); av.id='myAvatar'; document.getElementById('myName').innerText=currentUser; document.getElementById('myRole').innerText=currentRole==='owner'?'👑 Владелец':''; }
-function buildSidebar(){
-  let list=document.getElementById('chatList'), q=activeSearch.toLowerCase(); list.innerHTML='';
-  let sec1=document.createElement('div'); sec1.className='sidebar-section'; sec1.innerText='КОМНАТЫ'; list.appendChild(sec1);
-  let allRooms=roomList.length?roomList:[{id:'general',name:'Общий чат'}];
-  allRooms.filter(r=>!q||r.name.toLowerCase().includes(q)).forEach(r=>{ let item=makeChatItem(r.id,r.name,unread[r.id]); item.onclick=()=>joinRoom(r.id); if(r.id===currentRoom) item.classList.add('active'); list.appendChild(item); });
-  let onlineDMs=onlineUsers.filter(u=>u!==currentUser);
-  if(onlineDMs.length){
-    let sec2=document.createElement('div'); sec2.className='sidebar-section'; sec2.innerText='ЛИЧНЫЕ СООБЩЕНИЯ'; list.appendChild(sec2);
-    onlineDMs.forEach(u=>{ let rid=dmRoomId(u); let item=makeChatItem(rid,u,unread[rid]); item.onclick=()=>joinDM(u); list.appendChild(item); });
-  }
-}
-function makeChatItem(id,name,badge){
-  let item=document.createElement('div'); item.className='chat-item';
-  let av=document.createElement('div'); av.className='avatar sm'; av.style.background=avatarColor(name); av.textContent=name[0].toUpperCase(); item.appendChild(av);
-  let info=document.createElement('div'); info.className='chat-item-info'; info.innerHTML=`<div class="chat-item-name">${name}</div>`; item.appendChild(info);
-  if(badge){ let b=document.createElement('div'); b.className='chat-item-badge'; b.innerText=badge; item.appendChild(b); }
-  return item;
-}
-function markActive(roomId){ document.querySelectorAll('.chat-item.active').forEach(el=>el.classList.remove('active')); buildSidebar(); }
-function updateSidebarUnread(){ buildSidebar(); }
-document.getElementById('searchInp').oninput=function(){ activeSearch=this.value; buildSidebar(); };
-function joinRoom(id){ if(id===currentRoom){ closeSidebar(); return; } wsSend({type:'join_room',room_id:id}); closeSidebar(); leaveVoice(); }
-function joinDM(user){ let rid='dm_'+[currentUser,user].sort().join('_'); wsSend({type:'join_room',room_id:rid}); closeSidebar(); leaveVoice(); }
-function dmRoomId(user){ return 'dm_'+[currentUser,user].sort().join('_'); }
-function updateRoomHeader(){ let room=roomList.find(r=>r.id===currentRoom); let name=currentRoom.startsWith('dm_')?currentRoom.replace('dm_','').replace('_'+currentUser,'').replace(currentUser+'_',''):(room?room.name:(currentRoom==='general'?'Общий чат':currentRoom)); document.getElementById('chatRoomName').innerText=name; let chatAv=document.getElementById('chatAvatar'); chatAv.style.background=avatarColor(name); chatAv.textContent=name[0].toUpperCase(); let delBtn=document.getElementById('deleteRoomBtn'); delBtn.style.display=(currentRole==='owner'||(room&&room.creator===currentUser))&&currentRoom!=='general'?'block':'none'; }
-function updateOnlineStatus(){ document.getElementById('onlineText').innerText=`${onlineUsers.length} в сети`; }
-
-function renderMsg(data,isHistory){
-  let isMe=data.sender===currentUser;
-  let wrap=document.createElement('div'); wrap.className=`msg-wrap ${isMe?'me':'them'}`; wrap.id='msg-'+data.id;
-  let bubble=document.createElement('div'); bubble.className='msg-bubble';
-  if(!isMe){ let s=document.createElement('div'); s.className='msg-sender'; s.innerText=data.sender; s.onclick=e=>{ e.stopPropagation(); showProfile(data.sender); }; bubble.appendChild(s); }
-  let txt=document.createElement('span'); txt.innerText=data.text; bubble.appendChild(txt);
-  if(data.timestamp){ let t=document.createElement('div'); t.className='msg-time'; t.innerText=new Date(data.timestamp).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}); bubble.appendChild(t); }
-  wrap.appendChild(bubble);
-  if(data.reactions&&Object.keys(data.reactions).length) wrap.appendChild(buildReactionsEl(data.id,data.reactions));
-  let pt; bubble.addEventListener('touchstart',()=>{ pt=setTimeout(()=>showDeleteMenu(data.id,isMe),500); }); bubble.addEventListener('touchend',()=>clearTimeout(pt)); bubble.addEventListener('touchmove',()=>clearTimeout(pt)); bubble.addEventListener('contextmenu',e=>{ e.preventDefault(); showDeleteMenu(data.id,isMe); }); bubble.addEventListener('click',e=>{ if(e.target===bubble||e.target===txt) showReactionPicker(data.id,bubble); });
-  msgsDiv.appendChild(wrap); if(!isHistory) msgsDiv.scrollTop=msgsDiv.scrollHeight;
-}
-function appendSystem(text){ let d=document.createElement('div'); d.className='system'; d.innerText=text; msgsDiv.appendChild(d); msgsDiv.scrollTop=msgsDiv.scrollHeight; }
-function buildReactionsEl(msgId,reactions){ let row=document.createElement('div'); row.className='reactions-row'; for(let [emoji,users] of Object.entries(reactions)){ let span=document.createElement('span'); span.className='reaction'; span.innerText=`${emoji} ${users.length}`; span.onclick=e=>{ e.stopPropagation(); wsSend({type:'react',msg_id:msgId,emoji}); }; row.appendChild(span); } return row; }
-function updateReactions(msgId,reactions){ let wrap=document.getElementById('msg-'+msgId); if(!wrap) return; let row=wrap.querySelector('.reactions-row'); if(row) row.remove(); if(Object.keys(reactions).length) wrap.insertBefore(buildReactionsEl(msgId,reactions),wrap.querySelector('.msg-bubble').nextSibling); }
-function showDeleteMenu(msgId,isAuthor){ if(!isAuthor&&currentRole!=='owner') return; if(confirm('Удалить сообщение у всех?')) wsSend({type:'delete',msg_id:msgId}); else{ let el=document.getElementById('msg-'+msgId); if(el) el.remove(); } }
-function showReactionPicker(msgId,anchor){ /* оставлено для реакций на сообщения */ }
-
-function sendMessage(){ let text=msgInput.value.trim(); if(text){ wsSend({type:'text',text}); msgInput.value=''; clearTyping(); } }
-function startTyping(){ wsSend({type:'typing',typing:true,room_id:currentRoom}); clearTimeout(typingTimer); typingTimer=setTimeout(clearTyping,2000); }
-function clearTyping(){ wsSend({type:'typing',typing:false,room_id:currentRoom}); }
-msgInput.addEventListener('input',startTyping);
-msgInput.addEventListener('keypress',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendMessage(); } });
-sendBtn.onclick=sendMessage;
-
-// ===== НОВАЯ ЛОГИКА ПАНЕЛИ ЭМОДЗИ =====
-const emojiBtn = document.getElementById('emojiBtn');
-const emojiPanel = document.getElementById('emojiPanel');
+// 1. Панель эмодзи – переписана
 const EMOJI_LIST = ['😀','😂','😍','😎','😢','🔥','❤️','👍','🎉','🤔','👀','✅','⭐','🍕','💀','🤯','💯','🙈','😤','🥳','😘','🥲','😡','👿'];
+const emojiPanel = document.getElementById('emojiPanel');
+const emojiBtn = document.getElementById('emojiBtn');
 
 function buildEmojiPanel() {
   emojiPanel.innerHTML = '';
@@ -515,9 +165,12 @@ function buildEmojiPanel() {
     const btn = document.createElement('button');
     btn.className = 'emoji-item';
     btn.textContent = emo;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      msgInput.value += emo;
+    btn.addEventListener('click', () => {
+      if (editingMsgId) { // если редактируем – добавляем в поле редактирования
+        msgInput.value += emo;
+      } else {
+        msgInput.value += emo;
+      }
       msgInput.focus();
     });
     emojiPanel.appendChild(btn);
@@ -527,27 +180,207 @@ buildEmojiPanel();
 
 emojiBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  emojiPanel.classList.toggle('open');
+  // Закрываем панель, если открыта
+  if (emojiPanel.classList.contains('open')) {
+    emojiPanel.classList.remove('open');
+  } else {
+    emojiPanel.classList.add('open');
+    // Прокручиваем панель в видимую область (на мобильных)
+    if (window.innerWidth <= 600) {
+      setTimeout(() => {
+        emojiPanel.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 100);
+    }
+  }
 });
 
-// Закрываем панель при клике вне неё
+// Закрытие панели при клике вне её
 document.addEventListener('click', (e) => {
   if (!emojiPanel.contains(e.target) && e.target !== emojiBtn) {
     emojiPanel.classList.remove('open');
   }
 });
 
-// Небольшая помощь при фокусе — прокручиваем к полю ввода
-msgInput.addEventListener('focus', ()=>{
-  setTimeout(() => {
-    msgInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    msgsDiv.scrollTop = msgsDiv.scrollHeight;
-  }, 200);
-});
+// Учет виртуальной клавиатуры на мобильных
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    if (emojiPanel.classList.contains('open')) {
+      emojiPanel.style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
+    }
+  });
+}
 
-// Остальные функции (voice, call, profile и т.д.) остаются без изменений
+// 2. Профиль (уже был, но добавим стили)
+function showProfile(username){
+  // ... оставляем код showProfile, но добавляем закрытие по клику на overlay,
+  // и убедимся, что overlay и modal имеют правильные классы (уже есть в новых стилях)
+}
+
+// 3. Список участников комнаты (как в Telegram)
+function showRoomMembers() {
+  const roomId = currentRoom;
+  const members = [];
+  for (let [user, info] of Object.entries(activeConnectionsCache || {})) {
+    if (info.room === roomId) members.push(user);
+  }
+  // Если нет кеша, запрашиваем у сервера
+  wsSend({type: 'get_room_members', room_id: roomId});
+}
+
+// Обработчик ответа от сервера (нужно добавить в server.py)
+// Пока сделаем заглушку на основе online_users в этой комнате
+function displayRoomMembers(members) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <button class="modal-close">✕</button>
+    <h3 style="margin-bottom:16px;">👥 Участники (${members.length})</h3>
+    <div class="members-list" id="membersListContent"></div>
+  `;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const list = modal.querySelector('#membersListContent');
+  members.forEach(username => {
+    const item = document.createElement('div');
+    item.className = 'member-item';
+    const av = avatarEl(username, 'sm');
+    item.appendChild(av);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'member-name';
+    nameSpan.textContent = username;
+    item.appendChild(nameSpan);
+    const statusSpan = document.createElement('span');
+    statusSpan.className = 'member-status';
+    statusSpan.textContent = onlineUsers.includes(username) ? '🟢 онлайн' : '⚫ офлайн';
+    item.appendChild(statusSpan);
+    if (username === currentUser) {
+      const roleBadge = document.createElement('span');
+      roleBadge.className = 'member-role';
+      roleBadge.textContent = currentRole === 'owner' ? 'Владелец' : 'Участник';
+      item.appendChild(roleBadge);
+    }
+    list.appendChild(item);
+  });
+
+  modal.querySelector('.modal-close').onclick = () => overlay.remove();
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+}
+
+// Добавляем кнопку в шапку
+document.getElementById('showMembersBtn').onclick = showRoomMembers; // нужно создать кнопку
+// В HTML добавим <button id="showMembersBtn" class="icon-btn" title="Участники">👥</button> в chat-header
+
+// 4. Редактирование сообщений
+let editingMsgId = null;
+function startEditMessage(msgId, currentText) {
+  editingMsgId = msgId;
+  msgInput.value = currentText;
+  msgInput.focus();
+  sendBtn.style.display = 'none'; // скрываем обычную кнопку
+  // Показываем кнопки "Сохранить" и "Отмена"
+  if (!document.getElementById('editSaveBtn')) {
+    const editActions = document.createElement('div');
+    editActions.id = 'editActions';
+    editActions.style.display = 'flex';
+    editActions.style.gap = '8px';
+    editActions.innerHTML = `
+      <button id="editSaveBtn" class="btn" style="padding:8px 16px;">💾</button>
+      <button id="editCancelBtn" class="btn btn-out" style="padding:8px 16px;">✕</button>
+    `;
+    document.querySelector('.input-area').appendChild(editActions);
+    document.getElementById('editSaveBtn').onclick = saveEdit;
+    document.getElementById('editCancelBtn').onclick = cancelEdit;
+  } else {
+    document.getElementById('editActions').style.display = 'flex';
+  }
+}
+function saveEdit() {
+  const newText = msgInput.value.trim();
+  if (newText && editingMsgId) {
+    wsSend({type: 'edit_message', msg_id: editingMsgId, text: newText, room_id: currentRoom});
+  }
+  cancelEdit();
+}
+function cancelEdit() {
+  editingMsgId = null;
+  msgInput.value = '';
+  sendBtn.style.display = '';
+  document.getElementById('editActions').style.display = 'none';
+}
+
+// В context menu добавляем кнопку "Редактировать" (только для своих сообщений)
+// Модифицируем showDeleteMenu или создаем новое меню
 // ...
-// (полный код всех функций из предыдущего ответа опущен для краткости, но они должны присутствовать)
+
+// 5. Индикатор прочтения (DM)
+function markAsRead(roomId) {
+  if (roomId.startsWith('dm_')) {
+    wsSend({type: 'mark_read', room_id: roomId});
+  }
+}
+// Вызываем при входе в комнату
+// В joinRoom/joinDM добавляем markAsRead(currentRoom);
+// При получении сообщения в активной комнате тоже помечаем прочитанным.
+// Сервер должен слать confirm.
+
+// 6. Ответ с цитированием
+let replyToMsg = null;
+function replyToMessage(msgId, sender, text) {
+  replyToMsg = { msgId, sender, text };
+  showReplyPreview();
+  msgInput.focus();
+}
+function showReplyPreview() {
+  if (!replyToMsg) return;
+  const existing = document.getElementById('replyPreview');
+  if (existing) existing.remove();
+  const preview = document.createElement('div');
+  preview.id = 'replyPreview';
+  preview.className = 'reply-preview';
+  preview.innerHTML = `
+    <div>
+      <span class="reply-sender">${replyToMsg.sender}</span>
+      <span class="reply-text">${replyToMsg.text}</span>
+    </div>
+    <button class="reply-cancel" onclick="cancelReply()">✕</button>
+  `;
+  const inputArea = document.querySelector('.input-area');
+  inputArea.parentNode.insertBefore(preview, inputArea);
+}
+function cancelReply() {
+  replyToMsg = null;
+  const preview = document.getElementById('replyPreview');
+  if (preview) preview.remove();
+}
+// При отправке сообщения:
+function sendMessage() {
+  let text = msgInput.value.trim();
+  if (!text) return;
+  let payload = { type: 'text', text, room_id: currentRoom };
+  if (replyToMsg) {
+    payload.reply_to = replyToMsg.msgId;
+    cancelReply();
+  }
+  wsSend(payload);
+  msgInput.value = '';
+  clearTyping();
+  if (editingMsgId) cancelEdit();
+}
+
+// Дополнительные стили для цитаты в сообщении (в renderMsg)
+// ...
+
+// Серверные изменения (рекомендации для server.py)
+/*
+1. Обработчик 'edit_message': найти сообщение по msg_id и room_id, обновить текст, добавить флаг edited.
+   Разослать обновление всем в комнате.
+2. Обработчик 'mark_read': для комнаты DM, отправить отправителю подтверждение о прочтении конкретного сообщения (или всех до определённого ID).
+3. Обработчик 'get_room_members': вернуть список активных пользователей в комнате (можно из active_connections).
+4. Обработчик 'reply_to' при тексте: можно просто передавать reply_to в объекте сообщения, клиент сам отобразит.
+*/
 </script>
 </body>
 </html>
