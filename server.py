@@ -11,23 +11,20 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 async def startup():
     app.state.db_pool = await asyncpg.create_pool(DATABASE_URL)
     async with app.state.db_pool.acquire() as conn:
-        # УДАЛЯЕМ ВСЁ СТАРОЕ, чтобы дизайн обновился корректно
         await conn.execute('DROP TABLE IF EXISTS messages;')
         await conn.execute('CREATE TABLE messages (id SERIAL PRIMARY KEY, sender TEXT, text TEXT)')
 
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
+    if username in active_connections: return
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Отправка истории
     async with app.state.db_pool.acquire() as conn:
         rows = await conn.fetch('SELECT sender, text FROM messages ORDER BY id ASC LIMIT 50')
-        for row in rows:
-            await websocket.send_text(f"{row['sender']}:{row['text']}")
+        for row in rows: await websocket.send_text(f"{row['sender']}:{row['text']}")
 
-    await broadcast(f"СИСТЕМА:Пользователь {username} вошел")
-
+    await broadcast(f"СИСТЕМА:Пользователь {username} в сети")
     try:
         while True:
             data = await websocket.receive_text()
