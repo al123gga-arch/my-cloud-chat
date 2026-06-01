@@ -2,6 +2,7 @@ import os
 import bcrypt
 import json
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Dict, List, Set, Optional
@@ -14,17 +15,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-OWNER_USERNAME = os.getenv("OWNER_USERNAME", "admin")  # захардкоди свой ник здесь или в env
+OWNER_USERNAME = os.getenv("BurmaldaOwner", "admin")  # задай в Render Environment
 
 # ===== In-memory state =====
-# connections: {username: {"ws": WebSocket, "room": str}}
-active_connections: Dict[str, dict] = {}
-# rooms: {room_id: {"name": str, "messages": [...], "counter": int, "typing": set()}}
-rooms: Dict[str, dict] = {
-    "general": {"name": "Общий чат", "messages": [], "counter": 1, "typing": set(), "creator": None}
+active_connections: Dict[str, dict] = {}   # {username: {"ws": WebSocket, "room": str}}
+rooms: Dict[str, dict] = {}                # {room_id: {"name": str, "messages": list, "counter": int, "typing": set, "creator": str}}
+voice_rooms: Dict[str, Set[str]] = {}      # {room_id: set(username)}
+
+# Общая комната по умолчанию
+rooms["general"] = {
+    "name": "Общий чат",
+    "messages": [],
+    "counter": 1,
+    "typing": set(),
+    "creator": None
 }
-# voice: {room_id: set of usernames currently in voice}
-voice_rooms: Dict[str, Set[str]] = {"general": set()}
+voice_rooms["general"] = set()
 
 
 @asynccontextmanager
@@ -33,15 +39,30 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("DATABASE_URL environment variable is not set")
     logger.info("Connecting to database...")
     app.state.pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+
     async with app.state.pool.acquire() as conn:
+        # Таблица users с возможностью добавить колонку role, если её нет
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 username      TEXT PRIMARY KEY,
                 password_hash TEXT NOT NULL,
-                role          TEXT NOT NULL DEFAULT 'user',
                 created_at    TIMESTAMP DEFAULT NOW()
             )
         """)
+        # Добавляем колонку role, если отсутствует
+        await conn.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='role'
+                ) THEN
+                    ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+                END IF;
+            END
+            $$;
+        """)
+
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id         SERIAL PRIMARY KEY,
@@ -74,12 +95,21 @@ async def lifespan(app: FastAPI):
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
-        # Load saved rooms from DB into memory
+
+        # Загружаем сохранённые комнаты из БД в память
         saved_rooms = await conn.fetch("SELECT id, name, creator FROM rooms")
         for r in saved_rooms:
-            if r["id"] not in rooms:
-                rooms[r["id"]] = {"name": r["name"], "messages": [], "counter": 1, "typing": set(), "creator": r["creator"]}
-                voice_rooms[r["id"]] = set()
+            rid = r["id"]
+            if rid not in rooms:
+                rooms[rid] = {
+                    "name": r["name"],
+                    "messages": [],
+                    "counter": 1,
+                    "typing": set(),
+                    "creator": r["creator"]
+                }
+                voice_rooms[rid] = set()
+
     logger.info("Database ready.")
     yield
     logger.info("Closing database pool...")
@@ -114,23 +144,30 @@ async def broadcast_to_room(room_id: str, message: dict, exclude: Optional[str] 
 async def send_to_user(username: str, message: dict):
     if username in active_connections:
         try:
-            await active_connections[username]["ws"].send_text(
-                json.dumps(message, ensure_ascii=False)
-            )
+            await active_connections[username]["ws"].send_text(json.dumps(message, ensure_ascii=False))
         except Exception:
             pass
+
+async def broadcast_to_all_users(message: dict):
+    data = json.dumps(message, ensure_ascii=False)
+    dead = []
+    for username, info in active_connections.items():
+        try:
+            await info["ws"].send_text(data)
+        except Exception:
+            dead.append(username)
+    for u in dead:
+        active_connections.pop(u, None)
 
 async def log_action(pool, username: str, action: str):
     try:
         async with pool.acquire() as conn:
-            await conn.execute(
-                "INSERT INTO user_logs (username, action) VALUES ($1, $2)", username, action
-            )
+            await conn.execute("INSERT INTO user_logs (username, action) VALUES ($1, $2)", username, action)
     except Exception as e:
         logger.warning(f"log_action failed: {e}")
 
 
-# ===== Auth =====
+# ===== Auth endpoints =====
 @app.post("/register")
 async def register(username: str = Form(...), password: str = Form(...)):
     username = username.strip()
@@ -140,10 +177,12 @@ async def register(username: str = Form(...), password: str = Form(...)):
         return {"error": "Ник: от 2 до 32 символов"}
     if len(password) < 8:
         return {"error": "Пароль минимум 8 символов"}
+
     async with app.state.pool.acquire() as conn:
         exists = await conn.fetchval("SELECT 1 FROM users WHERE username = $1", username)
         if exists:
             return {"error": "Имя уже занято"}
+
         hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         role = "owner" if username == OWNER_USERNAME else "user"
         await conn.execute(
@@ -152,7 +191,6 @@ async def register(username: str = Form(...), password: str = Form(...)):
         )
     await log_action(app.state.pool, username, "register")
     return {"ok": True}
-
 
 @app.post("/login")
 async def login(username: str = Form(...), password: str = Form(...)):
@@ -168,33 +206,27 @@ async def login(username: str = Form(...), password: str = Form(...)):
     await log_action(app.state.pool, username, "login")
     return {"ok": True, "username": username, "role": row["role"]}
 
-
 @app.get("/users")
 async def get_users():
-    online = get_online_list()
-    return {"online": online, "count": len(online)}
-
+    return {"online": get_online_list(), "count": len(get_online_list())}
 
 @app.get("/rooms")
 async def get_rooms():
-    return {
-        "rooms": [
-            {"id": rid, "name": rdata["name"], "online": get_online_count(rid)}
-            for rid, rdata in rooms.items()
-            if not rid.startswith("dm_")
-        ]
-    }
+    public_rooms = [
+        {"id": rid, "name": rdata["name"], "online": get_online_count(rid)}
+        for rid, rdata in rooms.items()
+        if not rid.startswith("dm_")
+    ]
+    return {"rooms": public_rooms}
 
 
-# ===== WebSocket =====
+# ===== WebSocket endpoint =====
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
     async with app.state.pool.acquire() as conn:
-        user = await conn.fetchrow(
-            "SELECT role FROM users WHERE username = $1", username
-        )
+        user = await conn.fetchrow("SELECT role FROM users WHERE username = $1", username)
     if not user:
-        await websocket.close(code=1008)
+        await websocket.close(code=1008, reason="User not found")
         return
 
     role = user["role"]
@@ -214,11 +246,9 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             if not rid.startswith("dm_")
         ]
     })
-
-    # Send history of general
+    # Send history of general room
     for msg in rooms["general"]["messages"][-50:]:
         await send_to_user(username, {"type": "history", "data": msg})
-
     # Announce join
     await broadcast_to_room("general", {"type": "system", "text": f"✨ {username} присоединился"})
     await broadcast_to_all_users({"type": "online_update", "online_users": get_online_list()})
@@ -234,13 +264,14 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             t = obj.get("type", "")
             current_room = active_connections[username]["room"]
 
-            # --- Switch room ---
+            # ----- Join room -----
             if t == "join_room":
                 new_room = obj.get("room_id", "general")
                 if new_room not in rooms and not new_room.startswith("dm_"):
                     await send_to_user(username, {"type": "error", "text": "Комната не найдена"})
                     continue
-                # Leave voice if was in voice
+
+                # Leave voice if in voice
                 if current_room in voice_rooms and username in voice_rooms[current_room]:
                     voice_rooms[current_room].discard(username)
                     await broadcast_to_room(current_room, {
@@ -258,26 +289,40 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
 
                 active_connections[username]["room"] = new_room
 
-                # Create DM room in memory if needed
+                # Create DM room if needed
                 if new_room.startswith("dm_") and new_room not in rooms:
-                    rooms[new_room] = {"name": new_room, "messages": [], "counter": 1, "typing": set(), "creator": None}
+                    rooms[new_room] = {
+                        "name": new_room,
+                        "messages": [],
+                        "counter": 1,
+                        "typing": set(),
+                        "creator": None
+                    }
                     voice_rooms[new_room] = set()
 
-                # Send room history
-                room_msgs = rooms.get(new_room, {}).get("messages", [])
-                await send_to_user(username, {"type": "room_joined", "room_id": new_room, "name": rooms.get(new_room, {}).get("name", new_room)})
-                for msg in room_msgs[-50:]:
+                await send_to_user(username, {
+                    "type": "room_joined",
+                    "room_id": new_room,
+                    "name": rooms[new_room].get("name", new_room)
+                })
+                # Send history
+                for msg in rooms[new_room]["messages"][-50:]:
                     await send_to_user(username, {"type": "history", "data": msg})
 
-            # --- Create room ---
+            # ----- Create room -----
             elif t == "create_room":
                 room_name = str(obj.get("name", "")).strip()
                 if not room_name or len(room_name) > 40:
-                    await send_to_user(username, {"type": "error", "text": "Неверное название комнаты"})
+                    await send_to_user(username, {"type": "error", "text": "Неверное название"})
                     continue
-                import uuid
                 room_id = "room_" + uuid.uuid4().hex[:8]
-                rooms[room_id] = {"name": room_name, "messages": [], "counter": 1, "typing": set(), "creator": username}
+                rooms[room_id] = {
+                    "name": room_name,
+                    "messages": [],
+                    "counter": 1,
+                    "typing": set(),
+                    "creator": username
+                }
                 voice_rooms[room_id] = set()
                 try:
                     async with app.state.pool.acquire() as conn:
@@ -294,7 +339,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     "creator": username
                 })
 
-            # --- Delete room (owner only) ---
+            # ----- Delete room (only owner or creator) -----
             elif t == "delete_room":
                 room_id = obj.get("room_id")
                 if room_id == "general":
@@ -312,7 +357,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     pass
                 await broadcast_to_all_users({"type": "room_deleted", "room_id": room_id})
 
-            # --- Text message ---
+            # ----- Text message -----
             elif t == "text":
                 text = str(obj.get("text", "")).strip()
                 if not text:
@@ -340,8 +385,8 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                             current_room, username, text
                         )
                 except Exception as e:
-                    logger.warning(f"DB message save failed: {e}")
-                # For DM, send to both users
+                    logger.warning(f"DB save message: {e}")
+
                 if current_room.startswith("dm_"):
                     parts = current_room[3:].split("_")
                     for u in parts:
@@ -349,7 +394,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 else:
                     await broadcast_to_room(current_room, {"type": "message", "data": msg_data})
 
-            # --- Typing ---
+            # ----- Typing -----
             elif t == "typing":
                 room = rooms.get(current_room)
                 if room:
@@ -357,30 +402,32 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                         room["typing"].add(username)
                     else:
                         room["typing"].discard(username)
+                    typing_list = list(room["typing"])
                     if current_room.startswith("dm_"):
                         parts = current_room[3:].split("_")
                         for u in parts:
-                            await send_to_user(u, {"type": "typing", "users": list(room["typing"])})
+                            await send_to_user(u, {"type": "typing", "users": typing_list})
                     else:
-                        await broadcast_to_room(current_room, {"type": "typing", "users": list(room["typing"])})
+                        await broadcast_to_room(current_room, {"type": "typing", "users": typing_list})
 
-            # --- Delete message ---
+            # ----- Delete message -----
             elif t == "delete":
                 msg_id = obj.get("msg_id")
                 room = rooms.get(current_room)
                 if room:
-                    for msg in room["messages"]:
+                    for i, msg in enumerate(room["messages"]):
                         if msg["id"] == msg_id and (msg["sender"] == username or role == "owner"):
-                            room["messages"].remove(msg)
+                            del room["messages"][i]
+                            payload = {"type": "delete", "msg_id": msg_id, "room_id": current_room}
                             if current_room.startswith("dm_"):
                                 parts = current_room[3:].split("_")
                                 for u in parts:
-                                    await send_to_user(u, {"type": "delete", "msg_id": msg_id, "room_id": current_room})
+                                    await send_to_user(u, payload)
                             else:
-                                await broadcast_to_room(current_room, {"type": "delete", "msg_id": msg_id, "room_id": current_room})
+                                await broadcast_to_room(current_room, payload)
                             break
 
-            # --- React ---
+            # ----- Reaction -----
             elif t == "react":
                 msg_id = obj.get("msg_id")
                 emoji = str(obj.get("emoji", ""))
@@ -396,7 +443,12 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                     del reactions[emoji]
                             else:
                                 ulist.append(username)
-                            payload = {"type": "update_reactions", "msg_id": msg_id, "room_id": current_room, "reactions": reactions}
+                            payload = {
+                                "type": "update_reactions",
+                                "msg_id": msg_id,
+                                "room_id": current_room,
+                                "reactions": reactions
+                            }
                             if current_room.startswith("dm_"):
                                 parts = current_room[3:].split("_")
                                 for u in parts:
@@ -405,7 +457,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                 await broadcast_to_room(current_room, payload)
                             break
 
-            # --- Block user ---
+            # ----- Block user -----
             elif t == "block":
                 target = obj.get("target")
                 if target and target != username:
@@ -419,7 +471,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     except Exception as e:
                         logger.warning(f"Block failed: {e}")
 
-            # --- Kick (owner only) ---
+            # ----- Kick (owner only) -----
             elif t == "kick":
                 if role != "owner":
                     continue
@@ -431,7 +483,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     except Exception:
                         pass
 
-            # --- Mute user in room (owner only) ---
+            # ----- Mute user (owner only) -----
             elif t == "mute":
                 if role != "owner":
                     continue
@@ -439,7 +491,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 if target:
                     await send_to_user(target, {"type": "muted", "text": "Вы замьючены владельцем"})
 
-            # --- Voice: join/leave ---
+            # ----- Voice: join / leave -----
             elif t == "voice_join":
                 if current_room not in voice_rooms:
                     voice_rooms[current_room] = set()
@@ -459,17 +511,17 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                         "users": list(voice_rooms[current_room])
                     })
 
-            # --- WebRTC signaling ---
+            # ----- WebRTC signaling (calls) -----
             elif t in ("call_offer", "call_answer", "call_ice"):
                 target = obj.get("target")
                 payload = {**obj, "from": username}
                 if target and target in active_connections:
                     await send_to_user(target, payload)
                 else:
-                    # broadcast to voice room except sender
-                    for uname in list(voice_rooms.get(current_room, set())):
-                        if uname != username:
-                            await send_to_user(uname, payload)
+                    # broadcast to voice room participants
+                    for u in voice_rooms.get(current_room, set()):
+                        if u != username:
+                            await send_to_user(u, payload)
 
     except WebSocketDisconnect:
         pass
@@ -477,10 +529,9 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         logger.error(f"WS error for {username}: {e}")
     finally:
         current_room = active_connections.get(username, {}).get("room", "general")
-        # Leave voice
+        # Cleanup
         for vroom in voice_rooms.values():
             vroom.discard(username)
-        # Leave typing
         for room in rooms.values():
             room["typing"].discard(username)
         active_connections.pop(username, None)
@@ -490,20 +541,8 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         logger.info(f"WS disconnected: {username}")
 
 
-async def broadcast_to_all_users(message: dict):
-    data = json.dumps(message, ensure_ascii=False)
-    dead = []
-    for username, info in active_connections.items():
-        try:
-            await info["ws"].send_text(data)
-        except Exception:
-            dead.append(username)
-    for u in dead:
-        active_connections.pop(u, None)
-
-
 @app.get("/")
-async def get():
+async def serve_index():
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             return HTMLResponse(f.read())
