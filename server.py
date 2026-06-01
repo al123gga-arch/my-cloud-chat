@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-OWNER_USERNAME = os.getenv("OWNER_USERNAME", "admin")  # захардкоди свой ник здесь или в env
+OWNER_USERNAME = os.getenv("BurmaldaOwner", "admin")  # захардкоди свой ник здесь или в env
 
 # ===== In-memory state =====
 # connections: {username: {"ws": WebSocket, "room": str}}
