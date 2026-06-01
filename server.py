@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 import asyncpg
 
 app = FastAPI()
-active_connections = {} 
+active_connections = {}
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 @app.on_event("startup")
@@ -15,10 +15,13 @@ async def startup():
 
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
+    if username in active_connections:
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     active_connections[username] = websocket
     
-    # Отправка истории при подключении
+    # Отправка истории
     async with app.state.db_pool.acquire() as conn:
         rows = await conn.fetch('SELECT sender, text FROM messages ORDER BY id ASC LIMIT 50')
         for row in rows:
@@ -33,5 +36,9 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             for conn in active_connections.values():
                 await conn.send_text(f"{username}:{data}")
     except WebSocketDisconnect:
-        if username in active_connections:
-            del active_connections[username]
+        del active_connections[username]
+
+@app.get("/")
+async def get():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
