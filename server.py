@@ -15,14 +15,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-OWNER_USERNAME = os.getenv("BurmaldaOwner", "admin")  # задай в Render Environment
+OWNER_USERNAME = os.getenv("OWNER_USERNAME", "admin")
 
-# ===== In-memory state =====
-active_connections: Dict[str, dict] = {}   # {username: {"ws": WebSocket, "room": str}}
-rooms: Dict[str, dict] = {}                # {room_id: {"name": str, "messages": list, "counter": int, "typing": set, "creator": str}}
-voice_rooms: Dict[str, Set[str]] = {}      # {room_id: set(username)}
+# In-memory state
+active_connections: Dict[str, dict] = {}
+rooms: Dict[str, dict] = {}
+voice_rooms: Dict[str, Set[str]] = {}
 
-# Общая комната по умолчанию
+# Default room
 rooms["general"] = {
     "name": "Общий чат",
     "messages": [],
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     app.state.pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
 
     async with app.state.pool.acquire() as conn:
-        # Таблица users с возможностью добавить колонку role, если её нет
+        # Users table with role column migration
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 username      TEXT PRIMARY KEY,
@@ -49,7 +49,6 @@ async def lifespan(app: FastAPI):
                 created_at    TIMESTAMP DEFAULT NOW()
             )
         """)
-        # Добавляем колонку role, если отсутствует
         await conn.execute("""
             DO $$
             BEGIN
@@ -63,15 +62,28 @@ async def lifespan(app: FastAPI):
             $$;
         """)
 
+        # Messages table with room_id column migration
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id         SERIAL PRIMARY KEY,
-                room_id    TEXT NOT NULL DEFAULT 'general',
                 sender     TEXT NOT NULL,
                 text       TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT NOW()
             )
         """)
+        await conn.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name='messages' AND column_name='room_id'
+                ) THEN
+                    ALTER TABLE messages ADD COLUMN room_id TEXT NOT NULL DEFAULT 'general';
+                END IF;
+            END
+            $$;
+        """)
+
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS user_logs (
                 id        SERIAL PRIMARY KEY,
@@ -96,7 +108,7 @@ async def lifespan(app: FastAPI):
             )
         """)
 
-        # Загружаем сохранённые комнаты из БД в память
+        # Load saved rooms from DB
         saved_rooms = await conn.fetch("SELECT id, name, creator FROM rooms")
         for r in saved_rooms:
             rid = r["id"]
@@ -220,7 +232,7 @@ async def get_rooms():
     return {"rooms": public_rooms}
 
 
-# ===== WebSocket endpoint =====
+# ===== WebSocket =====
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
     async with app.state.pool.acquire() as conn:
@@ -234,7 +246,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     active_connections[username] = {"ws": websocket, "room": "general"}
     logger.info(f"WS connected: {username} (role={role})")
 
-    # Send initial state
     await send_to_user(username, {
         "type": "init",
         "username": username,
@@ -246,10 +257,8 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             if not rid.startswith("dm_")
         ]
     })
-    # Send history of general room
     for msg in rooms["general"]["messages"][-50:]:
         await send_to_user(username, {"type": "history", "data": msg})
-    # Announce join
     await broadcast_to_room("general", {"type": "system", "text": f"✨ {username} присоединился"})
     await broadcast_to_all_users({"type": "online_update", "online_users": get_online_list()})
 
@@ -264,82 +273,42 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             t = obj.get("type", "")
             current_room = active_connections[username]["room"]
 
-            # ----- Join room -----
             if t == "join_room":
                 new_room = obj.get("room_id", "general")
                 if new_room not in rooms and not new_room.startswith("dm_"):
                     await send_to_user(username, {"type": "error", "text": "Комната не найдена"})
                     continue
 
-                # Leave voice if in voice
                 if current_room in voice_rooms and username in voice_rooms[current_room]:
                     voice_rooms[current_room].discard(username)
-                    await broadcast_to_room(current_room, {
-                        "type": "voice_update",
-                        "room_id": current_room,
-                        "users": list(voice_rooms[current_room])
-                    })
-                # Leave typing
+                    await broadcast_to_room(current_room, {"type": "voice_update", "room_id": current_room, "users": list(voice_rooms[current_room])})
                 if current_room in rooms:
                     rooms[current_room]["typing"].discard(username)
-                    await broadcast_to_room(current_room, {
-                        "type": "typing",
-                        "users": list(rooms[current_room]["typing"])
-                    })
+                    await broadcast_to_room(current_room, {"type": "typing", "room_id": current_room, "users": list(rooms[current_room]["typing"])})
 
                 active_connections[username]["room"] = new_room
-
-                # Create DM room if needed
                 if new_room.startswith("dm_") and new_room not in rooms:
-                    rooms[new_room] = {
-                        "name": new_room,
-                        "messages": [],
-                        "counter": 1,
-                        "typing": set(),
-                        "creator": None
-                    }
+                    rooms[new_room] = {"name": new_room, "messages": [], "counter": 1, "typing": set(), "creator": None}
                     voice_rooms[new_room] = set()
-
-                await send_to_user(username, {
-                    "type": "room_joined",
-                    "room_id": new_room,
-                    "name": rooms[new_room].get("name", new_room)
-                })
-                # Send history
+                await send_to_user(username, {"type": "room_joined", "room_id": new_room, "name": rooms[new_room].get("name", new_room)})
                 for msg in rooms[new_room]["messages"][-50:]:
                     await send_to_user(username, {"type": "history", "data": msg})
 
-            # ----- Create room -----
             elif t == "create_room":
                 room_name = str(obj.get("name", "")).strip()
                 if not room_name or len(room_name) > 40:
                     await send_to_user(username, {"type": "error", "text": "Неверное название"})
                     continue
                 room_id = "room_" + uuid.uuid4().hex[:8]
-                rooms[room_id] = {
-                    "name": room_name,
-                    "messages": [],
-                    "counter": 1,
-                    "typing": set(),
-                    "creator": username
-                }
+                rooms[room_id] = {"name": room_name, "messages": [], "counter": 1, "typing": set(), "creator": username}
                 voice_rooms[room_id] = set()
                 try:
                     async with app.state.pool.acquire() as conn:
-                        await conn.execute(
-                            "INSERT INTO rooms (id, name, creator) VALUES ($1, $2, $3)",
-                            room_id, room_name, username
-                        )
+                        await conn.execute("INSERT INTO rooms (id, name, creator) VALUES ($1, $2, $3)", room_id, room_name, username)
                 except Exception as e:
                     logger.warning(f"Failed to save room: {e}")
-                await broadcast_to_all_users({
-                    "type": "room_created",
-                    "room_id": room_id,
-                    "name": room_name,
-                    "creator": username
-                })
+                await broadcast_to_all_users({"type": "room_created", "room_id": room_id, "name": room_name, "creator": username})
 
-            # ----- Delete room (only owner or creator) -----
             elif t == "delete_room":
                 room_id = obj.get("room_id")
                 if room_id == "general":
@@ -357,7 +326,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     pass
                 await broadcast_to_all_users({"type": "room_deleted", "room_id": room_id})
 
-            # ----- Text message -----
             elif t == "text":
                 text = str(obj.get("text", "")).strip()
                 if not text:
@@ -394,23 +362,22 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 else:
                     await broadcast_to_room(current_room, {"type": "message", "data": msg_data})
 
-            # ----- Typing -----
             elif t == "typing":
-                room = rooms.get(current_room)
+                room_id = obj.get("room_id", current_room)
+                room = rooms.get(room_id)
                 if room:
                     if obj.get("typing"):
                         room["typing"].add(username)
                     else:
                         room["typing"].discard(username)
                     typing_list = list(room["typing"])
-                    if current_room.startswith("dm_"):
-                        parts = current_room[3:].split("_")
+                    if room_id.startswith("dm_"):
+                        parts = room_id[3:].split("_")
                         for u in parts:
-                            await send_to_user(u, {"type": "typing", "users": typing_list})
+                            await send_to_user(u, {"type": "typing", "room_id": room_id, "users": typing_list})
                     else:
-                        await broadcast_to_room(current_room, {"type": "typing", "users": typing_list})
+                        await broadcast_to_room(room_id, {"type": "typing", "room_id": room_id, "users": typing_list})
 
-            # ----- Delete message -----
             elif t == "delete":
                 msg_id = obj.get("msg_id")
                 room = rooms.get(current_room)
@@ -427,7 +394,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                 await broadcast_to_room(current_room, payload)
                             break
 
-            # ----- Reaction -----
             elif t == "react":
                 msg_id = obj.get("msg_id")
                 emoji = str(obj.get("emoji", ""))
@@ -443,12 +409,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                     del reactions[emoji]
                             else:
                                 ulist.append(username)
-                            payload = {
-                                "type": "update_reactions",
-                                "msg_id": msg_id,
-                                "room_id": current_room,
-                                "reactions": reactions
-                            }
+                            payload = {"type": "update_reactions", "msg_id": msg_id, "room_id": current_room, "reactions": reactions}
                             if current_room.startswith("dm_"):
                                 parts = current_room[3:].split("_")
                                 for u in parts:
@@ -457,21 +418,16 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                 await broadcast_to_room(current_room, payload)
                             break
 
-            # ----- Block user -----
             elif t == "block":
                 target = obj.get("target")
                 if target and target != username:
                     try:
                         async with app.state.pool.acquire() as conn:
-                            await conn.execute(
-                                "INSERT INTO blocks (blocker, blocked) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-                                username, target
-                            )
+                            await conn.execute("INSERT INTO blocks (blocker, blocked) VALUES ($1, $2) ON CONFLICT DO NOTHING", username, target)
                         await send_to_user(username, {"type": "blocked", "target": target})
                     except Exception as e:
                         logger.warning(f"Block failed: {e}")
 
-            # ----- Kick (owner only) -----
             elif t == "kick":
                 if role != "owner":
                     continue
@@ -483,7 +439,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     except Exception:
                         pass
 
-            # ----- Mute user (owner only) -----
             elif t == "mute":
                 if role != "owner":
                     continue
@@ -491,34 +446,23 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 if target:
                     await send_to_user(target, {"type": "muted", "text": "Вы замьючены владельцем"})
 
-            # ----- Voice: join / leave -----
             elif t == "voice_join":
                 if current_room not in voice_rooms:
                     voice_rooms[current_room] = set()
                 voice_rooms[current_room].add(username)
-                await broadcast_to_room(current_room, {
-                    "type": "voice_update",
-                    "room_id": current_room,
-                    "users": list(voice_rooms[current_room])
-                })
+                await broadcast_to_room(current_room, {"type": "voice_update", "room_id": current_room, "users": list(voice_rooms[current_room])})
 
             elif t == "voice_leave":
                 if current_room in voice_rooms:
                     voice_rooms[current_room].discard(username)
-                    await broadcast_to_room(current_room, {
-                        "type": "voice_update",
-                        "room_id": current_room,
-                        "users": list(voice_rooms[current_room])
-                    })
+                    await broadcast_to_room(current_room, {"type": "voice_update", "room_id": current_room, "users": list(voice_rooms[current_room])})
 
-            # ----- WebRTC signaling (calls) -----
             elif t in ("call_offer", "call_answer", "call_ice"):
                 target = obj.get("target")
                 payload = {**obj, "from": username}
                 if target and target in active_connections:
                     await send_to_user(target, payload)
                 else:
-                    # broadcast to voice room participants
                     for u in voice_rooms.get(current_room, set()):
                         if u != username:
                             await send_to_user(u, payload)
@@ -529,7 +473,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         logger.error(f"WS error for {username}: {e}")
     finally:
         current_room = active_connections.get(username, {}).get("room", "general")
-        # Cleanup
         for vroom in voice_rooms.values():
             vroom.discard(username)
         for room in rooms.values():
