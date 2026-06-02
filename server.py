@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
             $$;
         """)
 
-        # profiles table (new)
+        # profiles table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS profiles (
                 username     TEXT PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
@@ -86,10 +86,24 @@ async def lifespan(app: FastAPI):
                 room_id    TEXT NOT NULL,
                 sender     TEXT NOT NULL,
                 text       TEXT NOT NULL,
-                reply_to   INTEGER,
-                edited     BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT NOW()
             )
+        """)
+
+        # Добавляем колонки reply_to и edited, если их нет
+        await conn.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_name='messages' AND column_name='reply_to') THEN
+                    ALTER TABLE messages ADD COLUMN reply_to INTEGER;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_name='messages' AND column_name='edited') THEN
+                    ALTER TABLE messages ADD COLUMN edited BOOLEAN DEFAULT FALSE;
+                END IF;
+            END
+            $$;
         """)
 
         # user logs
@@ -135,9 +149,6 @@ async def lifespan(app: FastAPI):
 
         # ---------- Загрузка сообщений из БД для каждой комнаты ----------
         for rid in rooms:
-            if rid.startswith("dm_"):
-                # Для DM-комнат тоже загружаем историю
-                pass
             rows = await conn.fetch(
                 "SELECT id, sender, text, reply_to, edited, created_at FROM messages WHERE room_id = $1 ORDER BY created_at",
                 rid
@@ -587,7 +598,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 if target:
                     await send_to_user(target, {"type": "muted", "text": "Вы замьючены владельцем"})
 
-            # ========== UPDATE PROFILE (new) ==========
+            # ========== UPDATE PROFILE ==========
             elif t == "update_profile":
                 try:
                     async with app.state.pool.acquire() as conn:
