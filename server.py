@@ -190,6 +190,7 @@ async def lifespan(app: FastAPI):
         )
         await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to INTEGER")
         await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited BOOLEAN DEFAULT FALSE")
+        await conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()")
         await conn.execute(
             "CREATE TABLE IF NOT EXISTS user_logs ("
             "  id SERIAL PRIMARY KEY, username TEXT NOT NULL,"
