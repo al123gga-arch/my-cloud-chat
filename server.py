@@ -32,6 +32,7 @@ if not DATABASE_URL:
 active_connections = {}
 rooms = {}
 voice_rooms = {}
+user_state = {}
 
 rooms["general"] = {
     "name": "Общий чат", "messages": [],
@@ -276,13 +277,29 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
         "bgId": r["bg_id"], "ownerBadge": r["owner_badge"]
     } for r in rows}
 
+    # Восстанавливаем последнюю комнату
+    last_room = user_state.get(username, {}).get("last_room", "general")
+    if last_room not in rooms and not last_room.startswith("dm_"):
+        last_room = "general"
+
+    # Создаём Избранное (DM с собой) если нет
+    saved_rid = "dm_" + username + "_" + username if username == sorted([username, username])[0] else "dm_" + username + "_" + username
+    saved_rid = "saved_" + username
+    if saved_rid not in rooms:
+        rooms[saved_rid] = {
+            "name": "Избранное", "messages": [],
+            "counter": 1, "typing": set(), "creator": username
+        }
+        voice_rooms[saved_rid] = set()
+
     await send_to_user(username, {
         "type": "init", "username": username, "role": role,
         "online_users": list(active_connections.keys()),
         "rooms": [{"id": rid, "name": rdata["name"]}
-                  for rid, rdata in rooms.items() if not rid.startswith("dm_")],
+                  for rid, rdata in rooms.items() if not rid.startswith("dm_") and not rid.startswith("saved_")],
         "profiles": profiles,
-        "voice_rooms": {rid: list(users) for rid, users in voice_rooms.items() if users}
+        "voice_rooms": {rid: list(users) for rid, users in voice_rooms.items() if users},
+        "last_room": last_room
     })
     for msg in rooms["general"]["messages"][-50:]:
         await send_to_user(username, {"type": "history", "data": msg})
