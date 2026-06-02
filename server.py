@@ -8,7 +8,7 @@ import bcrypt
 import json
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 import asyncpg
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Form
@@ -179,7 +179,7 @@ async def lifespan(app):
                     "id": row["id"], "room_id": rid,
                     "sender": row["sender"], "text": row["text"],
                     "reply_to": row["reply_to"], "edited": row["edited"],
-                    "timestamp": row["created_at"].isoformat() if row["created_at"] else datetime.now().isoformat(),
+                    "timestamp": (row["created_at"].isoformat() + "Z") if row["created_at"] else datetime.now(timezone.utc).isoformat() + "Z",
                     "reactions": {}
                 })
                 if row["id"] > max_id:
@@ -402,7 +402,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     continue
                 msg_data = {
                     "id": db_id, "room_id": cur_room, "sender": username,
-                    "text": text, "timestamp": datetime.now().isoformat(),
+                    "text": text, "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     "reactions": {}, "edited": False
                 }
                 if reply_to:
