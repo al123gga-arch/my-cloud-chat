@@ -246,6 +246,24 @@ textarea.form-inp{resize:vertical;min-height:70px;}
 .prof-bg-neon::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(124,92,252,.1) 2px,rgba(124,92,252,.1) 4px);animation:bg-aurora 2s linear infinite;}
 .prof-bg-gold{background:linear-gradient(135deg,#ffd700,#ff8c00,#ffd700);background-size:200% 200%;animation:bg-aurora 3s ease infinite;}
 .prof-bg-mint{background:linear-gradient(135deg,#4ade80,#06b6d4,#3b82f6);background-size:200% 200%;animation:bg-aurora 6s ease infinite;}
+.prof-bg-cyber{background:linear-gradient(135deg,#ff00ff,#00ffff,#ff00ff);background-size:300% 300%;animation:bg-aurora 3s ease infinite;}
+.prof-bg-midnight{background:linear-gradient(180deg,#0a0a2e,#1a1a4e,#0a0a2e);background-size:100% 200%;animation:bg-fire 5s ease infinite;}
+.prof-bg-sunset{background:linear-gradient(135deg,#ff6b35,#f7c948,#ff4d4d,#ff6b35);background-size:300% 300%;animation:bg-aurora 4s ease infinite;}
+.prof-bg-matrix{background:#0a0a0a;position:relative;}
+.prof-bg-matrix::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(74,222,128,.08) 2px,rgba(74,222,128,.08) 4px);animation:bg-aurora 8s linear infinite;}
+.prof-bg-royal{background:linear-gradient(135deg,#7c3aed,#ffd700,#7c3aed);background-size:200% 200%;animation:bg-aurora 4s ease infinite;}
+.prof-bg-ice{background:linear-gradient(135deg,#e0f7fa,#b2ebf2,#80deea,#e0f7fa);background-size:300% 300%;animation:bg-ocean 5s ease infinite;}
+.prof-bg-cherry{background:linear-gradient(135deg,#ff1744,#f50057,#d500f9,#ff1744);background-size:300% 300%;animation:bg-aurora 4s ease infinite;}
+.prof-bg-forest{background:linear-gradient(135deg,#1b5e20,#2e7d32,#388e3c,#1b5e20);background-size:300% 300%;animation:bg-fire 5s ease infinite;}
+/* Date separator */
+.msg-date-sep{text-align:center;font-size:11px;color:var(--dim);padding:8px 0;font-family:'Space Mono',monospace;position:relative;}
+.msg-date-sep::before,.msg-date-sep::after{content:'';position:absolute;top:50%;height:1px;width:30%;background:var(--border);}
+.msg-date-sep::before{left:0;}.msg-date-sep::after{right:0;}
+/* Code block */
+.msg-code{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:12px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;margin:4px 0;}
+/* Pin indicator */
+.room-pin{display:inline-flex;align-items:center;gap:2px;font-size:10px;color:var(--accent);padding:1px 5px;border-radius:4px;background:rgba(124,92,252,.1);flex-shrink:0;}
+.pinned-rooms-sep{margin-bottom:2px;}
 .owner-name{background:linear-gradient(90deg,#ff4444,#cc44ff,#4488ff,#cc44ff,#ff4444);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:ownerGrad 3s linear infinite;font-weight:800;}
 @keyframes ownerGrad{0%{background-position:0% center}100%{background-position:200% center}}
 .owner-badge-msg{display:inline-flex;align-items:center;gap:3px;padding:1px 7px;background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,100,100,.15));border:1px solid rgba(255,215,0,.3);border-radius:7px;font-size:10px;color:#ffd700;font-weight:700;}
@@ -283,7 +301,7 @@ textarea.form-inp{resize:vertical;min-height:70px;}
 const OWNER_USERNAME='BurmaldaOwner';
 const AV_COLORS=['#7c5cfc','#fc5c7d','#4ade80','#f59e0b','#06b6d4','#ec4899','#8b5cf6','#10b981','#f97316','#14b8a6'];
 const AV_EMOJIS=['😀','😎','🔥','⚡','🎮','🎵','🌙','⭐','🦊','🐺','🐉','🦁','🤖','👾','💎','🌈'];
-const PROFILE_BGS=[{id:'none',label:'Нет',cls:'prof-bg-none'},{id:'aurora',label:'Аврора',cls:'prof-bg-aurora'},{id:'fire',label:'Огонь',cls:'prof-bg-fire'},{id:'ocean',label:'Океан',cls:'prof-bg-ocean'},{id:'neon',label:'Неон',cls:'prof-bg-neon'},{id:'gold',label:'Золото',cls:'prof-bg-gold'},{id:'mint',label:'Минт',cls:'prof-bg-mint'}];
+const PROFILE_BGS=[{id:'none',label:'Нет',cls:'prof-bg-none'},{id:'aurora',label:'Аврора',cls:'prof-bg-aurora'},{id:'fire',label:'Огонь',cls:'prof-bg-fire'},{id:'ocean',label:'Океан',cls:'prof-bg-ocean'},{id:'neon',label:'Неон',cls:'prof-bg-neon'},{id:'gold',label:'Золото',cls:'prof-bg-gold'},{id:'mint',label:'Минт',cls:'prof-bg-mint'},{id:'cyber',label:'Кибер',cls:'prof-bg-cyber'},{id:'midnight',label:'Полночь',cls:'prof-bg-midnight'},{id:'sunset',label:'Закат',cls:'prof-bg-sunset'},{id:'matrix',label:'Матрица',cls:'prof-bg-matrix'},{id:'royal',label:'Королевский',cls:'prof-bg-royal'},{id:'ice',label:'Лёд',cls:'prof-bg-ice'},{id:'cherry',label:'Вишня',cls:'prof-bg-cherry'},{id:'forest',label:'Лес',cls:'prof-bg-forest'}];
 const EMOJI_CATS={'😀':['😀','😂','😍','😎','😢','🥳','😤','😡','🥲','😘','😭','🤔','😴','🤯','🥺','😏','😒','🙄','😬','🤗','😇','🤩','🥰','😋','😜','🤪','😝','🤑','🤠','😈','👿','💀','☠️','🤡','👹','👺','👻','👽','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'],'👍':['👍','👎','👋','🤝','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👌','🤌','🤏','✊','👊','🤛','🤜','👏','🙌','🤲','🙏','✍️','💪','🦾','💅','🤳'],'❤️':['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🔥','✨','⭐','🌟','💫','⚡','🌈','🎆','🎇','🎉','🎊','🎈','🎁','🎀','🏆','🥇'],'🎮':['🎮','🕹','🎲','🧩','🪀','🪁','🎯','🎳','🎰','🎪','🤹','🎭','🎨','🎬','🎤','🎧','🎼','🎵','🎶','🎷','🎸','🎹','🎺','🎻','🥁','🪘','🎙','📻','📺','📷','📸','📹','🎥','📽','🎞'],'🍕':['🍕','🍔','🌮','🌯','🥙','🧆','🥚','🍳','🥘','🍲','🥣','🥗','🍿','🧂','🥫','🍱','🍣','🍤','🍜','🍝','🍛','🍚','🍙','🍘','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧃','🥤','🧋','☕','🍵','🧉'],'🌍':['🌍','🌎','🌏','🌐','🗺','🧭','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞','🏟','🏛','🏗','🏘','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🏙','🌄','🌅','🌆','🌇','🌉','🌌','🌠','🎑','🏞','🌅']};
 const ICE=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun2.l.google.com:19302'},{urls:'stun:stun3.l.google.com:19302'},{urls:'stun:stun4.l.google.com:19302'},{urls:'turn:global.relay.metered.ca:80',username:'5e98120eb89018275b77b7d4',credential:'QJyXQOEwTmBfBfB7'}];
 let me=null,myRole=null,ws=null,currentRoom=null;
