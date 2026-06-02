@@ -5,7 +5,7 @@ import logging
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Any
 
 import asyncpg
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Form
@@ -22,7 +22,7 @@ active_connections: Dict[str, dict] = {}   # {username: {"ws": WebSocket, "room"
 rooms: Dict[str, dict] = {}                # {room_id: {"name": str, "messages": list, "counter": int, "typing": set, "creator": str}}
 voice_rooms: Dict[str, Set[str]] = {}      # {room_id: set(username)}
 
-# Общая комната
+# Общая комната (будет пересоздана из БД позже)
 rooms["general"] = {
     "name": "Общий чат",
     "messages": [],
@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
     app.state.pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
 
     async with app.state.pool.acquire() as conn:
+        # ---------- Создание всех таблиц ----------
         # users table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -49,7 +50,7 @@ async def lifespan(app: FastAPI):
                 created_at    TIMESTAMP DEFAULT NOW()
             )
         """)
-        # role column migration
+        # role column
         await conn.execute("""
             DO $$
             BEGIN
@@ -63,7 +64,22 @@ async def lifespan(app: FastAPI):
             $$;
         """)
 
-        # messages table (with edit support)
+        # profiles table (new)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS profiles (
+                username     TEXT PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
+                color        TEXT,
+                emoji        TEXT,
+                bio          TEXT,
+                status       TEXT DEFAULT 'online',
+                display_name TEXT,
+                bg_id        TEXT DEFAULT 'none',
+                owner_badge  TEXT,
+                updated_at   TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
+        # messages table
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id         SERIAL PRIMARY KEY,
@@ -76,7 +92,7 @@ async def lifespan(app: FastAPI):
             )
         """)
 
-        # user logs (optional)
+        # user logs
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS user_logs (
                 id        SERIAL PRIMARY KEY,
@@ -103,7 +119,7 @@ async def lifespan(app: FastAPI):
             )
         """)
 
-        # Load rooms from DB into memory
+        # ---------- Загрузка комнат из БД в память ----------
         saved_rooms = await conn.fetch("SELECT id, name, creator FROM rooms")
         for r in saved_rooms:
             rid = r["id"]
@@ -116,6 +132,36 @@ async def lifespan(app: FastAPI):
                     "creator": r["creator"]
                 }
                 voice_rooms[rid] = set()
+
+        # ---------- Загрузка сообщений из БД для каждой комнаты ----------
+        for rid in rooms:
+            if rid.startswith("dm_"):
+                # Для DM-комнат тоже загружаем историю
+                pass
+            rows = await conn.fetch(
+                "SELECT id, sender, text, reply_to, edited, created_at FROM messages WHERE room_id = $1 ORDER BY created_at",
+                rid
+            )
+            msgs = []
+            max_id = 0
+            for row in rows:
+                msgs.append({
+                    "id": row["id"],
+                    "room_id": rid,
+                    "sender": row["sender"],
+                    "text": row["text"],
+                    "reply_to": row["reply_to"],
+                    "edited": row["edited"],
+                    "timestamp": row["created_at"].isoformat(),
+                    "reactions": {}
+                })
+                if row["id"] > max_id:
+                    max_id = row["id"]
+            rooms[rid]["messages"] = msgs
+            rooms[rid]["counter"] = max_id + 1
+
+        # Убедимся, что у комнаты "general" корректное имя
+        rooms["general"]["name"] = "Общий чат"
 
     logger.info("Database ready.")
     yield
@@ -173,6 +219,23 @@ async def log_action(pool, username: str, action: str):
     except Exception as e:
         logger.warning(f"log_action failed: {e}")
 
+async def get_all_profiles(pool) -> Dict[str, dict]:
+    """Загружает все профили из БД для отправки при инициализации"""
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT username, color, emoji, bio, status, display_name, bg_id, owner_badge FROM profiles")
+    profiles = {}
+    for row in rows:
+        profiles[row["username"]] = {
+            "color": row["color"],
+            "emoji": row["emoji"],
+            "bio": row["bio"],
+            "status": row["status"],
+            "displayName": row["display_name"],
+            "bgId": row["bg_id"],
+            "ownerBadge": row["owner_badge"],
+        }
+    return profiles
+
 
 # ===== Auth endpoints =====
 @app.post("/register")
@@ -195,6 +258,11 @@ async def register(username: str = Form(...), password: str = Form(...)):
         await conn.execute(
             "INSERT INTO users (username, password_hash, role) VALUES ($1, $2, $3)",
             username, hashed, role
+        )
+        # Создаём запись в profiles со значениями по умолчанию
+        await conn.execute(
+            "INSERT INTO profiles (username, color, emoji, status, bg_id) VALUES ($1, $2, $3, $4, $5)",
+            username, None, None, "online", "none"
         )
     await log_action(app.state.pool, username, "register")
     return {"ok": True}
@@ -241,7 +309,10 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     active_connections[username] = {"ws": websocket, "room": "general"}
     logger.info(f"WS connected: {username} (role={role})")
 
-    # Отправляем init с полным списком комнат и онлайн-пользователей
+    # Получаем все профили
+    all_profiles = await get_all_profiles(app.state.pool)
+
+    # Отправляем init с полным списком комнат, онлайн-пользователями и профилями
     await send_to_user(username, {
         "type": "init",
         "username": username,
@@ -251,7 +322,8 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             {"id": rid, "name": rdata["name"]}
             for rid, rdata in rooms.items()
             if not rid.startswith("dm_")
-        ]
+        ],
+        "profiles": all_profiles
     })
 
     # Загружаем историю последних 50 сообщений общей комнаты
@@ -296,7 +368,7 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     voice_rooms[new_room] = set()
 
                 await send_to_user(username, {"type": "room_joined", "room_id": new_room, "name": rooms[new_room].get("name", new_room)})
-                # Отправляем историю этой комнаты
+                # Отправляем историю этой комнаты (из памяти, которая загружена из БД)
                 for msg in rooms[new_room]["messages"][-50:]:
                     await send_to_user(username, {"type": "history", "data": msg})
                 # Отмечаем прочтение в DM
@@ -348,12 +420,23 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 room = rooms.get(current_room)
                 if not room:
                     continue
-                msg_id = room["counter"]
-                room["counter"] += 1
                 reply_to = obj.get("reply_to")  # ID сообщения, на которое отвечают
 
+                # Сохраняем в БД и получаем реальный ID
+                try:
+                    async with app.state.pool.acquire() as conn:
+                        row = await conn.fetchrow(
+                            "INSERT INTO messages (room_id, sender, text, reply_to) VALUES ($1, $2, $3, $4) RETURNING id",
+                            current_room, username, text, reply_to
+                        )
+                        db_id = row["id"]
+                except Exception as e:
+                    logger.warning(f"DB save message failed: {e}")
+                    await send_to_user(username, {"type": "error", "text": "Не удалось отправить сообщение"})
+                    continue
+
                 msg_data = {
-                    "id": msg_id,
+                    "id": db_id,
                     "room_id": current_room,
                     "sender": username,
                     "text": text,
@@ -367,16 +450,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 room["messages"].append(msg_data)
                 if len(room["messages"]) > 200:
                     room["messages"].pop(0)
-
-                # Сохраняем в БД
-                try:
-                    async with app.state.pool.acquire() as conn:
-                        await conn.execute(
-                            "INSERT INTO messages (room_id, sender, text, reply_to) VALUES ($1, $2, $3, $4)",
-                            current_room, username, text, reply_to
-                        )
-                except Exception as e:
-                    logger.warning(f"DB save message: {e}")
 
                 # Отправка: в DM отправляем обоим, в общих комнатах всем
                 if current_room.startswith("dm_"):
@@ -410,7 +483,14 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 if room:
                     for i, msg in enumerate(room["messages"]):
                         if msg["id"] == msg_id and (msg["sender"] == username or role == "owner"):
+                            # Удаляем из памяти
                             del room["messages"][i]
+                            # Удаляем из БД
+                            try:
+                                async with app.state.pool.acquire() as conn:
+                                    await conn.execute("DELETE FROM messages WHERE id = $1", msg_id)
+                            except Exception as e:
+                                logger.warning(f"DB delete failed: {e}")
                             payload = {"type": "delete", "msg_id": msg_id, "room_id": current_room}
                             if current_room.startswith("dm_"):
                                 parts = current_room[3:].split("_")
@@ -430,6 +510,12 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                         if msg["id"] == msg_id and msg["sender"] == username:
                             msg["text"] = new_text
                             msg["edited"] = True
+                            # Обновляем в БД
+                            try:
+                                async with app.state.pool.acquire() as conn:
+                                    await conn.execute("UPDATE messages SET text = $1, edited = TRUE WHERE id = $2", new_text, msg_id)
+                            except Exception as e:
+                                logger.warning(f"DB edit failed: {e}")
                             payload = {
                                 "type": "message_edited",
                                 "msg_id": msg_id,
@@ -437,22 +523,12 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                                 "text": new_text,
                                 "edited": True
                             }
-                            # Рассылаем
                             if current_room.startswith("dm_"):
                                 parts = current_room[3:].split("_")
                                 for u in parts:
                                     await send_to_user(u, payload)
                             else:
                                 await broadcast_to_room(current_room, payload)
-                            # Обновляем в БД
-                            try:
-                                async with app.state.pool.acquire() as conn:
-                                    await conn.execute(
-                                        "UPDATE messages SET text = $1, edited = TRUE WHERE room_id = $2 AND sender = $3 AND id = (SELECT id FROM messages WHERE room_id = $2 ORDER BY created_at LIMIT 1 OFFSET $4)",
-                                        new_text, current_room, username, msg_id - 1
-                                    )
-                            except Exception as e:
-                                logger.warning(f"DB edit failed: {e}")
                             break
 
             # ========== REACT ==========
@@ -511,6 +587,42 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 if target:
                     await send_to_user(target, {"type": "muted", "text": "Вы замьючены владельцем"})
 
+            # ========== UPDATE PROFILE (new) ==========
+            elif t == "update_profile":
+                try:
+                    async with app.state.pool.acquire() as conn:
+                        await conn.execute("""
+                            INSERT INTO profiles (username, color, emoji, bio, status, display_name, bg_id, owner_badge)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT (username) DO UPDATE SET
+                                color = EXCLUDED.color,
+                                emoji = EXCLUDED.emoji,
+                                bio = EXCLUDED.bio,
+                                status = EXCLUDED.status,
+                                display_name = EXCLUDED.display_name,
+                                bg_id = EXCLUDED.bg_id,
+                                owner_badge = EXCLUDED.owner_badge,
+                                updated_at = NOW()
+                        """, username, obj.get("color"), obj.get("emoji"), obj.get("bio"),
+                           obj.get("status"), obj.get("displayName"), obj.get("bgId"), obj.get("ownerBadge"))
+                    # Рассылаем обновление всем онлайн-пользователям
+                    await broadcast_to_all_users({
+                        "type": "profile_updated",
+                        "username": username,
+                        "profile": {
+                            "color": obj.get("color"),
+                            "emoji": obj.get("emoji"),
+                            "bio": obj.get("bio"),
+                            "status": obj.get("status"),
+                            "displayName": obj.get("displayName"),
+                            "bgId": obj.get("bgId"),
+                            "ownerBadge": obj.get("ownerBadge"),
+                        }
+                    })
+                except Exception as e:
+                    logger.warning(f"Update profile failed: {e}")
+                    await send_to_user(username, {"type": "error", "text": "Не удалось сохранить профиль"})
+
             # ========== VOICE JOIN/LEAVE ==========
             elif t == "voice_join":
                 if current_room not in voice_rooms:
@@ -549,8 +661,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             elif t == "get_room_members":
                 room_id = obj.get("room_id", current_room)
                 members = [u for u, info in active_connections.items() if info.get("room") == room_id]
-                # добавим роли (только для публичных комнат?)
-                # Для простоты отправим список имён
                 await send_to_user(username, {"type": "room_members", "room_id": room_id, "members": members})
 
     except WebSocketDisconnect:
