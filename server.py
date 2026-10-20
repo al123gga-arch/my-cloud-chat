@@ -226,7 +226,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 rooms.pop(rid, None)
                 voice_rooms.pop(rid, None)
                 try:
-Используйте код с осторожностью.
 async with app.state.pool.acquire() as conn:
 async with conn.transaction():
 await conn.execute("DELETE FROM messages WHERE room_id = $1", rid)
@@ -439,9 +438,3 @@ except FileNotFoundError:
 logger.error(f"Файл index.html не найден по пути {path}")
 return HTMLResponse("index.html not found", status_code=500)
 logger.info("Бэкенд сервера полностью скомпилирован и готов к работе.")
-
----
-
-<FollowUp>
-Сохрани код в **`server.py`**, сделай пуш на GitHub, проверь, что деплой на Render прошёл успешно. После этого **отправь мне твой JS-скрипт или весь файл `index.html`** (Шаг 5 из 5), и мы идеально внедрим в него автоматический вывод локального времени для Оренбурга/Москвы/Екатеринбурга!
-</FollowUp>
