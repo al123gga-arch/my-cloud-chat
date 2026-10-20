@@ -277,188 +277,196 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 else:
                     await broadcast_to_room(cur_room, {"type": "message", "data": msg_data})
 
-# СТРОГОЕ ФОРМАТИРОВАНИЕ ДАТЫ: Отправляем без микросекунд с суффиксом Z (UTC)
-current_ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-msg_data = {
-"id": db_id, "room_id": cur_room, "sender": username,
-"text": text, "timestamp": current_ts, "reactions": {}, "edited": False
-}
-if reply_to:
-msg_data["reply_to"] = reply_to
-room["messages"].append(msg_data)
-if len(room["messages"]) > 200:
-room["messages"].pop(0)
-if cur_room.startswith("dm_"):
-await send_to_user(username, {"type": "message", "data": msg_data})
-other = get_dm_other(cur_room, username)
-if other:
-await send_to_user(other, {"type": "message", "data": msg_data})
-else:
-await broadcast_to_room(cur_room, {"type": "message", "data": msg_data})
-# === СТАТУС ПЕЧАТИ (TYPING) ===
-elif t == "typing":
-rid = obj.get("room_id", cur_room)
-room = rooms.get(rid)
-if room:
-if obj.get("typing"):
-room["typing"].add(username)
-else:
-room["typing"].discard(username)
-tl = list(room["typing"])
-payload = {"type": "typing", "room_id": rid, "users": tl}
-if rid.startswith("dm_"):
-await send_to_user(username, payload)
-other = get_dm_other(rid, username)
-if other:
-await send_to_user(other, payload)
-else:
-await broadcast_to_room(rid, payload)
-# === УДАЛЕНИЕ СООБЩЕНИЯ ===
-elif t == "delete":
-msg_id = obj.get("msg_id")
-room = rooms.get(cur_room)
-if room:
-for i, m in enumerate(room["messages"]):
-if m["id"] == msg_id and (m["sender"] == username or role == "owner"):
-del room["messages"][i]
-try:
-async with app.state.pool.acquire() as conn:
-await conn.execute("DELETE FROM messages WHERE id = $1", msg_id)
-except:
-pass
-payload = {"type": "delete", "msg_id": msg_id, "room_id": cur_room}
-if cur_room.startswith("dm_"):
-await send_to_user(username, payload)
-other = get_dm_other(cur_room, username)
-if other:
-await send_to_user(other, payload)
-else:
-await broadcast_to_room(cur_room, payload)
-break
-# === РЕДАКТИРОВАНИЕ СООБЩЕНИЯ ===
-elif t == "edit_message":
-msg_id = obj.get("msg_id")
-new_text = obj.get("text", "").strip()
-room = rooms.get(cur_room)
-if room and new_text:
-for m in room["messages"]:
-if m["id"] == msg_id and m["sender"] == username:
-m["text"] = new_text
-m["edited"] = True
-try:
-async with app.state.pool.acquire() as conn:
-await conn.execute("UPDATE messages SET text = $1, edited = TRUE WHERE id = $2", new_text, msg_id)
-except:
-pass
-payload = {"type": "message_edited", "msg_id": msg_id, "room_id": cur_room, "text": new_text, "edited": True}
-if cur_room.startswith("dm_"):
-await send_to_user(username, payload)
-other = get_dm_other(cur_room, username)
-if other:
-await send_to_user(other, payload)
-else:
-await broadcast_to_room(cur_room, payload)
-break
-# === РЕАКЦИИ (EMOJI) ===
-elif t == "react":
-msg_id = obj.get("msg_id")
-emoji = obj.get("emoji", "")
-room = rooms.get(cur_room)
-if room and emoji:
-for m in room["messages"]:
-if m["id"] == msg_id:
-reactions = m.setdefault("reactions", {})
-ulist = reactions.setdefault(emoji, [])
-if username in ulist:
-ulist.remove(username)
-else:
-ulist.append(username)
-if not ulist:
-del reactions[emoji]
-payload = {"type": "update_reactions", "msg_id": msg_id, "room_id": cur_room, "reactions": reactions}
-if cur_room.startswith("dm_"):
-await send_to_user(username, payload)
-other = get_dm_other(cur_room, username)
-if other:
-await send_to_user(other, payload)
-else:
-await broadcast_to_room(cur_room, payload)
-break
-# === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
-elif t == "update_profile":
-try:
-async with app.state.pool.acquire() as conn:
-await conn.execute("""
-INSERT INTO profiles (username, color, emoji, bio, status, display_name, bg_id, owner_badge)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-ON CONFLICT (username) DO UPDATE SET
-color=EXCLUDED.color, emoji=EXCLUDED.emoji, bio=EXCLUDED.bio,
-status=EXCLUDED.status, display_name=EXCLUDED.display_name,
-bg_id=EXCLUDED.bg_id, owner_badge=EXCLUDED.owner_badge, updated_at=NOW()
-""", username, obj.get("color"), obj.get("emoji"), obj.get("bio"), obj.get("status"), obj.get("displayName"), obj.get("bgId"), obj.get("ownerBadge"))
-await broadcast_to_all_users({"type": "profile_updated", "username": username, "profile": {"color": obj.get("color"), "emoji": obj.get("emoji"), "bio": obj.get("bio"), "status": obj.get("status"), "displayName": obj.get("displayName"), "bgId": obj.get("bgId"), "ownerBadge": obj.get("ownerBadge")}})
-except Exception as e:
-logger.warning(f"Ошибка обновления профиля: {e}")
-await send_to_user(username, {"type": "error", "text": "Не удалось сохранить профиль"})
-# === ПОДКЛЮЧЕНИЕ К ГОЛОСУ ===
-elif t == "voice_join":
-if cur_room not in voice_rooms:
-voice_rooms[cur_room] = set()
-voice_rooms[cur_room].add(username)
-await broadcast_to_room(cur_room, {"type": "voice_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
-await broadcast_to_all_users({"type": "voice_room_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
-# === ОТКЛЮЧЕНИЕ ОТ ГОЛОСА ===
-elif t == "voice_leave":
-if cur_room in voice_rooms:
-voice_rooms[cur_room].discard(username)
-await broadcast_to_room(cur_room, {"type": "voice_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
-await broadcast_to_all_users({"type": "voice_room_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
-# === СТАТУС РАЗГОВОРА (SPEAKING) ===
-elif t == "voice_speaking":
-speaking = obj.get("speaking", False)
-if cur_room in voice_rooms:
-await broadcast_to_room(cur_room, {"type": "voice_speaking", "room_id": cur_room, "username": username, "speaking": speaking}, exclude=username)
-# === WebRTC СИГНАЛИНГ ===
-elif t in ("call_offer", "call_answer", "call_ice", "call_reject"):
-target = obj.get("target")
-payload = {**obj, "from": username}
-if target and target in active_connections:
-await send_to_user(target, payload)
-# === ПОМЕТИТЬ КАК ПРОЧИТАННОЕ ===
-elif t == "mark_read":
-rid = obj.get("room_id")
-if rid and rid.startswith("dm_"):
-other = get_dm_other(rid, username)
-if other:
-await send_to_user(other, {"type": "messages_read", "room_id": rid, "by": username})
-# === СПИСОК УЧАСТНИКОВ КОМНАТЫ ===
-elif t == "get_room_members":
-rid = obj.get("room_id", cur_room)
-members = [u for u, info in active_connections.items() if info.get("room") == rid]
-await send_to_user(username, {"type": "room_members", "room_id": rid, "members": members})
-except WebSocketDisconnect:
-pass
-except Exception as e:
-logger.error(f"Критическая ошибка веб-сокета для пользователя {username}: {e}")
-logger.error(traceback.format_exc())
-finally:
-user_info = active_connections.get(username, {})
-cur_room = user_info.get("room", "general") if isinstance(user_info, dict) else "general"
-for vroom in voice_rooms.values():
-vroom.discard(username)
-for r in rooms.values():
-r["typing"].discard(username)
-active_connections.pop(username, None)
-await broadcast_to_room(cur_room, {"type": "system", "text": f"👋 {username} покинул чат"})
-await broadcast_to_all_users({"type": "online_update", "online_users": list(active_connections.keys())})
+                room["messages"].append(msg_data)
+                if len(room["messages"]) > 200: 
+                    room["messages"].pop(0)
+                    
+                if cur_room.startswith("dm_"):
+                    await send_to_user(username, {"type": "message", "data": msg_data})
+                    other = get_dm_other(cur_room, username)
+                    if other: 
+                        await send_to_user(other, {"type": "message", "data": msg_data})
+                else:
+                    await broadcast_to_room(cur_room, {"type": "message", "data": msg_data})
+            # === СТАТУС ПЕЧАТИ (TYPING) ===
+            elif t == "typing":
+                rid = obj.get("room_id", cur_room)
+                room = rooms.get(rid)
+                if room:
+                    if obj.get("typing"):
+                        room["typing"].add(username)
+                    else:
+                        room["typing"].discard(username)
+                    tl = list(room["typing"])
+                    payload = {"type": "typing", "room_id": rid, "users": tl}
+                    if rid.startswith("dm_"):
+                        await send_to_user(username, payload)
+                        other = get_dm_other(rid, username)
+                        if other:
+                            await send_to_user(other, payload)
+                    else:
+                        await broadcast_to_room(rid, payload)
+
+            # === УДАЛЕНИЕ СООБЩЕНИЯ ===
+            elif t == "delete":
+                msg_id = obj.get("msg_id")
+                room = rooms.get(cur_room)
+                if room:
+                    for i, m in enumerate(room["messages"]):
+                        if m["id"] == msg_id and (m["sender"] == username or role == "owner"):
+                            del room["messages"][i]
+                            try:
+                                async with app.state.pool.acquire() as conn:
+                                    await conn.execute("DELETE FROM messages WHERE id = $1", msg_id)
+                            except:
+                                pass
+                            payload = {"type": "delete", "msg_id": msg_id, "room_id": cur_room}
+                            if cur_room.startswith("dm_"):
+                                await send_to_user(username, payload)
+                                other = get_dm_other(cur_room, username)
+                                if other:
+                                    await send_to_user(other, payload)
+                            else:
+                                await broadcast_to_room(cur_room, payload)
+                            break
+
+            # === РЕДАКТИРОВАНИЕ СООБЩЕНИЯ ===
+            elif t == "edit_message":
+                msg_id = obj.get("msg_id")
+                new_text = obj.get("text", "").strip()
+                room = rooms.get(cur_room)
+                if room and new_text:
+                    for m in room["messages"]:
+                        if m["id"] == msg_id and m["sender"] == username:
+                            m["text"] = new_text
+                            m["edited"] = True
+                            try:
+                                async with app.state.pool.acquire() as conn:
+                                    await conn.execute("UPDATE messages SET text = $1, edited = TRUE WHERE id = $2", new_text, msg_id)
+                            except:
+                                pass
+                            payload = {"type": "message_edited", "msg_id": msg_id, "room_id": cur_room, "text": new_text, "edited": True}
+                            if cur_room.startswith("dm_"):
+                                await send_to_user(username, payload)
+                                other = get_dm_other(cur_room, username)
+                                if other:
+                                    await send_to_user(other, payload)
+                            else:
+                                await broadcast_to_room(cur_room, payload)
+                            break
+
+            # === РЕАКЦИИ (EMOJI) ===
+            elif t == "react":
+                msg_id = obj.get("msg_id")
+                emoji = obj.get("emoji", "")
+                room = rooms.get(cur_room)
+                if room and emoji:
+                    for m in room["messages"]:
+                        if m["id"] == msg_id:
+                            reactions = m.setdefault("reactions", {})
+                            ulist = reactions.setdefault(emoji, [])
+                            if username in ulist:
+                                ulist.remove(username)
+                            else:
+                                ulist.append(username)
+                            if not ulist:
+                                del reactions[emoji]
+                            payload = {"type": "update_reactions", "msg_id": msg_id, "room_id": cur_room, "reactions": reactions}
+                            if cur_room.startswith("dm_"):
+                                await send_to_user(username, payload)
+                                other = get_dm_other(cur_room, username)
+                                if other:
+                                    await send_to_user(other, payload)
+                            else:
+                                await broadcast_to_room(cur_room, payload)
+                            break
+
+            # === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
+            elif t == "update_profile":
+                try:
+                    async with app.state.pool.acquire() as conn:
+                        await conn.execute("""
+                            INSERT INTO profiles (username, color, emoji, bio, status, display_name, bg_id, owner_badge)
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                            ON CONFLICT (username) DO UPDATE SET
+                                color=EXCLUDED.color, emoji=EXCLUDED.emoji, bio=EXCLUDED.bio,
+                                status=EXCLUDED.status, display_name=EXCLUDED.display_name,
+                                bg_id=EXCLUDED.bg_id, owner_badge=EXCLUDED.owner_badge, updated_at=NOW()
+                        """, username, obj.get("color"), obj.get("emoji"), obj.get("bio"), obj.get("status"), obj.get("displayName"), obj.get("bgId"), obj.get("ownerBadge"))
+                    await broadcast_to_all_users({"type": "profile_updated", "username": username, "profile": {"color": obj.get("color"), "emoji": obj.get("emoji"), "bio": obj.get("bio"), "status": obj.get("status"), "displayName": obj.get("displayName"), "bgId": obj.get("bgId"), "ownerBadge": obj.get("ownerBadge")}})
+                except Exception as e:
+                    logger.warning(f"Ошибка обновления профиля: {e}")
+                    await send_to_user(username, {"type": "error", "text": "Не удалось сохранить профиль"})
+
+            # === ПОДКЛЮЧЕНИЕ К ГОЛОСУ ===
+            elif t == "voice_join":
+                if cur_room not in voice_rooms:
+                    voice_rooms[cur_room] = set()
+                voice_rooms[cur_room].add(username)
+                await broadcast_to_room(cur_room, {"type": "voice_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
+                await broadcast_to_all_users({"type": "voice_room_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
+
+            # === ОТКЛЮЧЕНИЕ ОТ ГОЛОСА ===
+            elif t == "voice_leave":
+                if cur_room in voice_rooms:
+                    voice_rooms[cur_room].discard(username)
+                    await broadcast_to_room(cur_room, {"type": "voice_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
+                    await broadcast_to_all_users({"type": "voice_room_update", "room_id": cur_room, "users": list(voice_rooms[cur_room])})
+
+            # === СТАТУС РАЗГОВОРА (SPEAKING) ===
+            elif t == "voice_speaking":
+                speaking = obj.get("speaking", False)
+                if cur_room in voice_rooms:
+                    await broadcast_to_room(cur_room, {"type": "voice_speaking", "room_id": cur_room, "username": username, "speaking": speaking}, exclude=username)
+
+            # === WebRTC СИГНАЛИНГ ===
+            elif t in ("call_offer", "call_answer", "call_ice", "call_reject"):
+                target = obj.get("target")
+                payload = {**obj, "from": username}
+                if target and target in active_connections:
+                    await send_to_user(target, payload)
+
+            # === ПОМЕТИТЬ КАК ПРОЧИТАННОЕ ===
+            elif t == "mark_read":
+                rid = obj.get("room_id")
+                if rid and rid.startswith("dm_"):
+                    other = get_dm_other(rid, username)
+                    if other:
+                        await send_to_user(other, {"type": "messages_read", "room_id": rid, "by": username})
+
+            # === СПИСОК УЧАСТНИКОВ КОМНАТЫ ===
+            elif t == "get_room_members":
+                rid = obj.get("room_id", cur_room)
+                members = [u for u, info in active_connections.items() if info.get("room") == rid]
+                await send_to_user(username, {"type": "room_members", "room_id": rid, "members": members})
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.error(f"Критическая ошибка веб-сокета для пользователя {username}: {e}")
+        logger.error(traceback.format_exc())
+    finally:
+        user_info = active_connections.get(username, {})
+        cur_room = user_info.get("room", "general") if isinstance(user_info, dict) else "general"
+        for vroom in voice_rooms.values():
+            vroom.discard(username)
+        for r in rooms.values():
+            r["typing"].discard(username)
+        active_connections.pop(username, None)
+        await broadcast_to_room(cur_room, {"type": "system", "text": f"👋 {username} покинул чат"})
+        await broadcast_to_all_users({"type": "online_update", "online_users": list(active_connections.keys())})
+
+
 @app.get("/")
 async def serve_index():
-base = os.path.dirname(os.path.abspath(file))
-path = os.path.join(base, "index.html")
-try:
-with open(path, "r", encoding="utf-8") as f:
-return HTMLResponse(f.read())
-except FileNotFoundError:
-logger.error(f"Файл index.html не найден по пути {path}")
-return HTMLResponse("index.html not found", status_code=500)
+    base = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base, "index.html")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    except FileNotFoundError:
+        logger.error(f"Файл index.html не найден по пути {path}")
+        return HTMLResponse("<h1>index.html not found</h1>", status_code=500)
+
+
 logger.info("Бэкенд сервера полностью скомпилирован и готов к работе.")
