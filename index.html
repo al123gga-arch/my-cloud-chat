@@ -191,9 +191,12 @@
 
     <script>
         let ws = null;
+        let reconnectTimer = null;
         let currentUsername = "";
         let currentRoomId = "general";
         let isLight = false;
+        // Антидубликат сообщений (защита от повторной истории / реконнектов)
+        const seenMessageIds = new Set();
 
         function toggleAuthWindows(showRegister) {
             document.getElementById("login-window").classList.toggle("hidden", showRegister);
@@ -238,16 +241,40 @@
         }
 
         function initializeMessengerSession() {
+            // Отменяем отложенный реконнект, если был
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+
+            // Убиваем старый сокет: снимаем обработчики, чтобы он не плодил дубли
+            if (ws) {
+                const oldSocket = ws;
+                ws = null;
+                oldSocket.onopen = null;
+                oldSocket.onmessage = null;
+                oldSocket.onerror = null;
+                oldSocket.onclose = null;
+                try { oldSocket.close(); } catch (e) { /* ignore */ }
+            }
+
             document.getElementById("login-window").classList.add("hidden");
             document.getElementById("register-window").classList.add("hidden");
             document.getElementById("app-container").style.display = "block";
             document.getElementById("my-name-display").innerText = `👤 ${currentUsername}`;
+
             const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-            ws = new WebSocket(`${protocol}//${window.location.host}/ws/${currentUsername}`);
-            ws.onmessage = function(event) {
+            const socket = new WebSocket(`${protocol}//${window.location.host}/ws/${currentUsername}`);
+            ws = socket;
+
+            socket.onmessage = function (event) {
+                // Игнорируем сообщения от «мёртвого» сокета (защита от дублей после реконнекта)
+                if (ws !== socket) return;
+
                 const packet = jsonParseSafe(event.data);
                 if (!packet) return;
-                switch(packet.type) {
+
+                switch (packet.type) {
                     case "init":
                         renderSidebarElements(packet.rooms || [], packet.online_users || []);
                         if (packet.last_room) {
@@ -256,84 +283,103 @@
                             switchActiveChatRoom("general", "Общий чат");
                         }
                         break;
+
                     case "online_update":
                         updateUsersOnlineList(packet.online_users || []);
                         break;
+
                     case "room_joined":
                         if (packet.name && !String(packet.name).startsWith("dm_")) {
                             document.getElementById("current-chat-title").innerText = packet.name;
                         }
+                        // При смене комнаты сбрасываем антидубликат и чистим окно под историю
+                        seenMessageIds.clear();
                         document.getElementById("chat-messages-box").innerHTML = "";
                         break;
+
                     case "history":
                         if (packet.data) {
                             appendMessageToBox(packet.data, true);
                         }
                         break;
+
                     case "message":
                         if (packet.data && packet.data.room_id === currentRoomId) {
                             appendMessageToBox(packet.data, false);
                         }
                         break;
+
                     case "system":
                         appendSystemNotification(packet.text);
                         break;
+
                     case "room_created":
                         addRoomToSidebarList(packet.room_id, packet.name);
                         break;
+                }
+            };
+
+            socket.onerror = function () {
+                // Следом прилетит onclose — там и обработаем
+            };
+
+            socket.onclose = function () {
+                if (ws !== socket) return;
+                ws = null;
+
+                appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
+
+                if (reconnectTimer) return;
+                reconnectTimer = setTimeout(function () {
+                    reconnectTimer = null;
+                    initializeMessengerSession();
+                }, 5000);
+            };
         }
-    };
-        ws.onclose = function() {
-            appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
-            setTimeout(initializeMessengerSession, 5000);
-        };
 
+        function appendMessageToBox(msg, isHistory) {
+            const box = document.getElementById("chat-messages-box");
+            if (!msg) return;
 
-function appendMessageToBox(msg, isHistory) {
-    const box = document.getElementById("chat-messages-box");
-    if (!msg) return;
+            // Отбрасываем дубликаты по id, если сервер его присылает
+            const msgId = msg.id !== undefined ? msg.id : msg.message_id;
+            if (msgId !== undefined && msgId !== null) {
+                const key = String(msgId);
+                if (seenMessageIds.has(key)) return;
+                seenMessageIds.add(key);
+            }
 
-    const isOutgoing = msg.sender === currentUsername;
-    const wrapper = document.createElement("div");
-    wrapper.className = `msg-wrapper ${isOutgoing ? 'outgoing' : 'incoming'}`;
-    
-    // Принудительно задаем правильные стили контейнера
-    wrapper.style.width = "100%";
-    wrapper.style.display = "flex";
-    wrapper.style.flexDirection = "column";
-    wrapper.style.alignItems = isOutgoing ? "flex-end" : "flex-start";
+            const isOutgoing = msg.sender === currentUsername;
+            const wrapper = document.createElement("div");
+            wrapper.className = `msg-wrapper ${isOutgoing ? "outgoing" : "incoming"}`;
 
-    const rawTimestamp = msg.timestamp || msg.time;
-    let displayTime = "00:00";
-    
-    if (rawTimestamp) {
-        let cleanTimestamp = rawTimestamp;
-        if (cleanTimestamp.includes('.')) {
-            cleanTimestamp = cleanTimestamp.split('.') + 'Z';
+            const rawTimestamp = msg.timestamp || msg.time;
+            let displayTime = "00:00";
+            if (rawTimestamp) {
+                let cleanTimestamp = String(rawTimestamp);
+                if (cleanTimestamp.includes(".")) {
+                    // ВАЖНО: split('.')[0] — иначе получаем массив, склеенный с 'Z'
+                    cleanTimestamp = cleanTimestamp.split(".")[0] + "Z";
+                }
+                const dateObj = new Date(cleanTimestamp);
+                if (!isNaN(dateObj.getTime())) {
+                    displayTime = dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                } else {
+                    displayTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                }
+            } else {
+                displayTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            }
+
+            wrapper.innerHTML = `
+                <div class="msg-bubble">
+                    <div class="msg-sender">${escapeHtml(msg.sender || "")}</div>
+                    <div class="msg-text">${escapeHtml(msg.text || "")}</div>
+                    <div class="msg-meta"><span>${displayTime}</span></div>
+                </div>`;
+            box.appendChild(wrapper);
+            box.scrollTop = box.scrollHeight;
         }
-        const dateObj = new Date(cleanTimestamp);
-        if (!isNaN(dateObj.getTime())) {
-            displayTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else {
-            displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-    } else {
-        displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    wrapper.innerHTML = `
-        <div class="msg-bubble" style="max-width: 65%; min-width: 120px;">
-            <div class="msg-sender" style="display: block !important; margin-bottom: 4px;">${msg.sender}</div>
-            <div class="msg-text" style="font-size: 15px; line-height: 1.4;">${escapeHtml(msg.text)}</div>
-            <div class="msg-meta">
-                <span>${displayTime}</span>
-            </div>
-        </div>
-    `;
-    
-    box.appendChild(wrapper);
-    box.scrollTop = box.scrollHeight;
-}
 
         function appendSystemNotification(text) {
             const box = document.getElementById("chat-messages-box");
@@ -353,7 +399,8 @@ function appendMessageToBox(msg, isHistory) {
         }
 
         function handleInputFieldKeyPress(event) {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
                 sendMessageToServer();
             }
         }
@@ -399,7 +446,9 @@ function appendMessageToBox(msg, isHistory) {
             dmsBox.innerHTML = "";
             (users || []).forEach(user => {
                 if (user === currentUsername) return;
-                const dmRoomId = currentUsername < user ? `dm_${currentUsername}_${user}` : `dm_${user}_${currentUsername}`;
+                const dmRoomId = currentUsername < user
+                    ? `dm_${currentUsername}_${user}`
+                    : `dm_${user}_${currentUsername}`;
                 const div = document.createElement("div");
                 div.id = `item-${dmRoomId}`;
                 div.className = "list-item";
@@ -411,7 +460,7 @@ function appendMessageToBox(msg, isHistory) {
 
         function jsonParseSafe(data) {
             try { return JSON.parse(data); }
-            catch(e) { return null; }
+            catch (e) { return null; }
         }
 
         function escapeHtml(str) {
