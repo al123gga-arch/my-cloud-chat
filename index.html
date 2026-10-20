@@ -165,14 +165,26 @@
                 </div>
             </div>
 
-            <!-- ЗОНА ЧАТА -->
+            <!-- === ЗОНА ЧАТА === -->
             <div class="chat-area">
                 <div class="chat-header">
                     <div>
                         <span id="current-chat-title" style="font-weight:700; font-size:16px;">Выберите чат</span>
                         <span id="current-chat-status"></span>
                     </div>
-        <!-- КАК ДОЛЖНО БЫТЬ (строки 174-184): -->
+                </div>
+
+                <!-- Контейнер для сообщений чата -->
+                <div id="chat-messages-box" class="chat-messages">
+                    <div class="system-msg">Добро пожаловать! Выберите комнату или напишите кому-нибудь из списка пользователей.</div>
+                </div>
+
+                <div class="chat-input-panel">
+                    <input type="text" id="message-text-input" placeholder="Написать сообщение..." onkeypress="handleInputFieldKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessageToServer()">➤</button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -182,10 +194,8 @@
         let currentRoomId = "general";
         let isLight = false;
 
-let currentUsername = "";
-let currentRoomId = "general";
-let isLight = false;
-function toggleAuthWindows(showRegister) {
+        function toggleAuthWindows(showRegister) {
+
 document.getElementById("login-window").classList.toggle("hidden", showRegister);
 document.getElementById("register-window").classList.toggle("hidden", !showRegister);
 }
