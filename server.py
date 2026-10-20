@@ -226,33 +226,57 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                 rooms.pop(rid, None)
                 voice_rooms.pop(rid, None)
                 try:
-async with app.state.pool.acquire() as conn:
-async with conn.transaction():
-await conn.execute("DELETE FROM messages WHERE room_id = $1", rid)
-await conn.execute("DELETE FROM rooms WHERE id = $1", rid)
-except:
-pass
-await broadcast_to_all_users({"type": "room_deleted", "room_id": rid})
-# === ОТПРАВКА ТЕКСТОВОГО СООБЩЕНИЯ ===
-elif t == "text":
-text = obj.get("text", "").strip()
-if not text:
-continue
-room = rooms.get(cur_room)
-if not room:
-continue
-reply_to = obj.get("reply_to")
-try:
-async with app.state.pool.acquire() as conn:
-row = await conn.fetchrow(
-"INSERT INTO messages (room_id, sender, text, reply_to) VALUES ($1, $2, $3, $4) RETURNING id",
-cur_room, username, text, reply_to
-)
-db_id = row["id"]
-except Exception as e:
-logger.warning(f"Ошибка сохранения сообщения в БД: {e}")
-await send_to_user(username, {"type": "error", "text": "Не удалось отправить"})
-continue
+                    async with app.state.pool.acquire() as conn:
+                        async with conn.transaction():
+                            await conn.execute("DELETE FROM messages WHERE room_id = $1", rid)
+                            await conn.execute("DELETE FROM rooms WHERE id = $1", rid)
+                except: 
+                    pass
+                await broadcast_to_all_users({"type": "room_deleted", "room_id": rid})
+
+            # === ОТПРАВКА ТЕКСТОВОГО СООБЩЕНИЯ ===
+            elif t == "text":
+                text = obj.get("text", "").strip()
+                if not text: 
+                    continue
+                room = rooms.get(cur_room)
+                if not room: 
+                    continue
+                reply_to = obj.get("reply_to")
+                try:
+                    async with app.state.pool.acquire() as conn:
+                        row = await conn.fetchrow(
+                            "INSERT INTO messages (room_id, sender, text, reply_to) VALUES ($1, $2, $3, $4) RETURNING id", 
+                            cur_room, username, text, reply_to
+                        )
+                        db_id = row["id"]
+                except Exception as e:
+                    logger.warning(f"Ошибка сохранения сообщения в БД: {e}")
+                    await send_to_user(username, {"type": "error", "text": "Не удалось отправить"})
+                    continue
+
+                # СТРОГОЕ ФОРМАТИРОВАНИЕ ДАТЫ: Отправляем без микросекунд с суффиксом Z (UTC)
+                current_ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                
+                msg_data = {
+                    "id": db_id, "room_id": cur_room, "sender": username, 
+                    "text": text, "timestamp": current_ts, "reactions": {}, "edited": False
+                }
+                if reply_to: 
+                    msg_data["reply_to"] = reply_to
+                    
+                room["messages"].append(msg_data)
+                if len(room["messages"]) > 200: 
+                    room["messages"].pop(0)
+                    
+                if cur_room.startswith("dm_"):
+                    await send_to_user(username, {"type": "message", "data": msg_data})
+                    other = get_dm_other(cur_room, username)
+                    if other: 
+                        await send_to_user(other, {"type": "message", "data": msg_data})
+                else:
+                    await broadcast_to_room(cur_room, {"type": "message", "data": msg_data})
+
 # СТРОГОЕ ФОРМАТИРОВАНИЕ ДАТЫ: Отправляем без микросекунд с суффиксом Z (UTC)
 current_ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 msg_data = {
