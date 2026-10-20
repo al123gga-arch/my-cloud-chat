@@ -266,62 +266,74 @@
                         document.getElementById("chat-messages-box").innerHTML = "";
                         break;
                     case "history":
-                        appendMessageToBox(packet.data || packet, true);
-                        break;
-                    case "message": {
-                        const mData = packet.data || packet;
-                        if (mData.room_id === currentRoomId) {
-                            appendMessageToBox(mData, false);
+                        if (packet.data) {
+                            appendMessageToBox(packet.data, true);
                         }
                         break;
-                    }
+                    case "message":
+                        if (packet.data && packet.data.room_id === currentRoomId) {
+                            appendMessageToBox(packet.data, false);
+                        }
+                        break;
                     case "system":
                         appendSystemNotification(packet.text);
                         break;
                     case "room_created":
                         addRoomToSidebarList(packet.room_id, packet.name);
                         break;
-                }
-            };
-            ws.onclose = function() {
-                appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
-                setTimeout(initializeMessengerSession, 5000);
-            };
         }
+    };
+        ws.onclose = function() {
+            appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
+            setTimeout(initializeMessengerSession, 5000);
+        };
 
-        function appendMessageToBox(msg, isHistory) {
-            const box = document.getElementById("chat-messages-box");
-            if (!msg) return;
-            const isOutgoing = msg.sender === currentUsername;
-            const wrapper = document.createElement("div");
-            wrapper.className = `msg-wrapper ${isOutgoing ? 'outgoing' : 'incoming'}`;
-            const rawTimestamp = msg.timestamp || msg.time;
-            let displayTime = "00:00";
-            if (rawTimestamp) {
-                let cleanTimestamp = String(rawTimestamp);
-                if (cleanTimestamp.includes('.')) {
-                    cleanTimestamp = cleanTimestamp.split('.')[0] + 'Z';
-                }
-                const dateObj = new Date(cleanTimestamp);
-                if (!isNaN(dateObj.getTime())) {
-                    displayTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                } else {
-                    displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-            } else {
-                displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            wrapper.innerHTML = `
-                <div class="msg-bubble">
-                    <div class="msg-sender">${escapeHtml(msg.sender || "")}</div>
-                    <div class="msg-text">${escapeHtml(msg.text || "")}</div>
-                    <div class="msg-meta">
-                        <span>${displayTime}</span>
-                    </div>
-                </div>`;
-            box.appendChild(wrapper);
-            box.scrollTop = box.scrollHeight;
+
+function appendMessageToBox(msg, isHistory) {
+    const box = document.getElementById("chat-messages-box");
+    if (!msg) return;
+
+    const isOutgoing = msg.sender === currentUsername;
+    const wrapper = document.createElement("div");
+    wrapper.className = `msg-wrapper ${isOutgoing ? 'outgoing' : 'incoming'}`;
+    
+    // Принудительно задаем правильные стили контейнера
+    wrapper.style.width = "100%";
+    wrapper.style.display = "flex";
+    wrapper.style.flexDirection = "column";
+    wrapper.style.alignItems = isOutgoing ? "flex-end" : "flex-start";
+
+    const rawTimestamp = msg.timestamp || msg.time;
+    let displayTime = "00:00";
+    
+    if (rawTimestamp) {
+        let cleanTimestamp = rawTimestamp;
+        if (cleanTimestamp.includes('.')) {
+            cleanTimestamp = cleanTimestamp.split('.') + 'Z';
         }
+        const dateObj = new Date(cleanTimestamp);
+        if (!isNaN(dateObj.getTime())) {
+            displayTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    } else {
+        displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    wrapper.innerHTML = `
+        <div class="msg-bubble" style="max-width: 65%; min-width: 120px;">
+            <div class="msg-sender" style="display: block !important; margin-bottom: 4px;">${msg.sender}</div>
+            <div class="msg-text" style="font-size: 15px; line-height: 1.4;">${escapeHtml(msg.text)}</div>
+            <div class="msg-meta">
+                <span>${displayTime}</span>
+            </div>
+        </div>
+    `;
+    
+    box.appendChild(wrapper);
+    box.scrollTop = box.scrollHeight;
+}
 
         function appendSystemNotification(text) {
             const box = document.getElementById("chat-messages-box");
