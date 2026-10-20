@@ -44,7 +44,7 @@
         .auth-header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
         .auth-header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
         .form-group { margin-bottom: 16px; position: relative; }
-        .form-group input { width: 100%; padding: 12px 40px 12px 14px; background-color: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 15px; outline: none; transition: border 0.2s; }
+        .form-group input { width: 100%; padding: 12px 14px; background-color: var(--bg-main); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 15px; outline: none; transition: border 0.2s; }
         .form-group input:focus { border-color: var(--accent); }
         .btn { width: 100%; padding: 12px; background-color: var(--accent); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
         .btn:hover { background-color: var(--accent-hover); }
@@ -65,14 +65,13 @@
         .list-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
         .list-item:hover { background-color: var(--bg-main); }
         .list-item.active { background-color: var(--accent); color: white; }
-        .list-item.active .item-muted { color: #e0e0e0; }
         .item-muted { font-size: 12px; color: var(--text-muted); }
 
         /* Основная зона чата */
         .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-chat); }
         .chat-header { height: 60px; padding: 0 20px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        
+
         /* Стили сообщений */
         .msg-wrapper { display: flex; flex-direction: column; max-width: 65%; width: fit-content; margin-bottom: 4px; }
         .msg-wrapper.incoming { align-self: flex-start; }
@@ -83,13 +82,14 @@
         .msg-meta { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: var(--text-muted); }
         .msg-sender { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
         .outgoing .msg-sender { display: none; }
-        
+
         /* Системные сообщения */
         .system-msg { align-self: center; background-color: var(--bg-panel); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: var(--text-muted); margin: 8px 0; }
 
         /* Панель ввода */
         .chat-input-panel { padding: 16px 20px; background-color: var(--bg-panel); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
         .chat-input-panel input { flex: 1; padding: 12px 16px; background-color: var(--bg-main); border: 1px solid var(--border); border-radius: 24px; color: var(--text-main); font-size: 15px; outline: none; }
+        .chat-input-panel input:focus { border-color: var(--accent); }
         .send-btn { background-color: var(--accent); color: white; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.2s; }
         .send-btn:hover { background-color: var(--accent-hover); }
 
@@ -139,14 +139,14 @@
     <!-- ГЛАВНЫЙ ИНТЕРФЕЙС МЕССЕНДЖЕРА -->
     <div id="app-container">
         <div class="messenger-layout">
-            
+
             <!-- БОКОВАЯ ПАНЕЛЬ -->
             <div class="sidebar">
                 <div class="sidebar-header">
                     <h2 id="my-name-display">⚡ Burmalda Mess</h2>
                     <span style="cursor:pointer;" onclick="toggleTheme()">🌙</span>
                 </div>
-                
+
                 <div class="list-section">
                     <div class="section-title">
                         <span>Комнаты</span>
@@ -165,7 +165,7 @@
                 </div>
             </div>
 
-            <!-- === ЗОНА ЧАТА === -->
+            <!-- ЗОНА ЧАТА -->
             <div class="chat-area">
                 <div class="chat-header">
                     <div>
@@ -175,13 +175,14 @@
                 </div>
 
                 <!-- Контейнер для сообщений чата -->
-                <div id="chat-messages-box" class="chat-messages">
+                <div class="chat-messages" id="chat-messages-box">
                     <div class="system-msg">Добро пожаловать! Выберите комнату или напишите кому-нибудь из списка пользователей.</div>
                 </div>
 
+                <!-- Панель ввода сообщения -->
                 <div class="chat-input-panel">
-                    <input type="text" id="message-text-input" placeholder="Написать сообщение..." onkeypress="handleInputFieldKeyPress(event)">
-                    <button class="send-btn" onclick="sendMessageToServer()">➤</button>
+                    <input type="text" id="message-text-input" placeholder="Написать сообщение..." autocomplete="off" onkeydown="handleInputFieldKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessageToServer()" title="Отправить">➤</button>
                 </div>
             </div>
 
@@ -195,210 +196,221 @@
         let isLight = false;
 
         function toggleAuthWindows(showRegister) {
-
-document.getElementById("login-window").classList.toggle("hidden", showRegister);
-document.getElementById("register-window").classList.toggle("hidden", !showRegister);
-}
-function toggleTheme() {
-isLight = !isLight;
-document.body.classList.toggle("light-theme", isLight);
-}
-async function handleAuth(event, endpoint) {
-event.preventDefault();
-const form = event.target;
-const formData = new FormData(form);
-try {
-const response = await fetch(endpoint, { method: "POST", body: formData });
-const result = await response.json();
-if (result.error) {
-alert(result.error);
-} else if (result.ok) {
-if (endpoint === "/register") {
-alert("Регистрация успешна! Теперь вы можете войти.");
-toggleAuthWindows(false);
-} else if (endpoint === "/login") {
-currentUsername = result.username;
-initializeMessengerSession();
-}
-}
-} catch (err) {
-alert("Ошибка соединения с сервером деплоя.");
-}
-}
-function initializeMessengerSession() {
-document.getElementById("login-window").classList.add("hidden");
-document.getElementById("register-window").classList.add("hidden");
-document.getElementById("app-container").style.display = "block";
-document.getElementById("my-name-display").innerText = 👤 ${currentUsername};
-const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-ws = new WebSocket(${protocol}//${window.location.host}/ws/${currentUsername});
-ws.onmessage = function(event) {
-const packet = jsonParseSafe(event.data);
-if (!packet) return;
-switch(packet.type) {
-case "init":
-renderSidebarElements(packet.rooms, packet.online_users);
-if (packet.last_room) {
-switchActiveChatRoom(packet.last_room, packet.last_room);
-}
-break;
-case "online_update":
-updateUsersOnlineList(packet.online_users);
-break;
-case "room_joined":
-document.getElementById("current-chat-title").innerText = packet.name;
-document.getElementById("chat-messages-box").innerHTML = "";
-break;
-case "history":
-appendMessageToBox(packet.data, true);
-break;
-case "message":
-if (packet.data.room_id === currentRoomId) {
-appendMessageToBox(packet.data, false);
-}
-break;
-case "system":
-appendSystemNotification(packet.text);
-break;
-case "room_created":
-addRoomToSidebarList(packet.room_id, packet.name);
-break;
-}
-};
-ws.onclose = function() {
-appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
-setTimeout(initializeMessengerSession, 5000);
-};
-}
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ДЛЯ ЛЮБОГО РЕГИОНА (Екб, Москва и др.)
-function formatTimestampToLocalTime(isoString) {
-if (!isoString) return "00:00";
-// Создаем объект JS Date из стандартной UTC строки ISO 8601
-const dateObj = new Date(isoString);
-// Если дата некорректна, возвращаем текущее время компьютера
-if (isNaN(dateObj.getTime())) {
-return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-// Автоматически переводит UTC в часовой пояс операционной системы клиента
-return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-function appendMessageToBox(msg, isHistory) {
-    const box = document.getElementById("chat-messages-box");
-    if (!msg) return;
-
-    const isOutgoing = msg.sender === currentUsername;
-    const wrapper = document.createElement("div");
-    wrapper.className = `msg-wrapper ${isOutgoing ? 'outgoing' : 'incoming'}`;
-    
-    // Получаем сырую строку времени из любого возможного поля пакета
-    const rawTimestamp = msg.timestamp || msg.time || (msg.data ? msg.data.timestamp : null);
-    
-    // Безопасный парсинг и автоматический перевод в локальный часовой пояс пользователя
-    let displayTime = "00:00";
-    if (rawTimestamp) {
-        // Отрезаем микросекунды, если они ломают Date в старых браузерах
-        let cleanTimestamp = rawTimestamp;
-        if (cleanTimestamp.includes('.')) {
-            cleanTimestamp = cleanTimestamp.split('.')[0] + 'Z';
+            document.getElementById("login-window").classList.toggle("hidden", showRegister);
+            document.getElementById("register-window").classList.toggle("hidden", !showRegister);
         }
-        const dateObj = new Date(cleanTimestamp);
-        if (!isNaN(dateObj.getTime())) {
-            displayTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else {
-            displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        function toggleTheme() {
+            isLight = !isLight;
+            document.body.classList.toggle("light-theme", isLight);
         }
-    } else {
-        displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
 
-    // Рендерим HTML в соответствии с вашими стилями отображения элементов
-    wrapper.innerHTML = `
-        <div class="msg-bubble">
-            <div class="msg-sender">${msg.sender}</div>
-            <div class="msg-text">${escapeHtml(msg.text)}</div>
-            <div class="msg-meta">
-                <span>${displayTime}</span>
-            </div>
-        </div>
-    `;
-    
-    box.appendChild(wrapper);
-    
-    // Исправляем баг «чат уходит»: железно скроллим вниз при каждом добавлении сообщения
-    box.scrollTop = box.scrollHeight;
-}
+        async function handleAuth(event, endpoint) {
+            event.preventDefault();
+            const form = event.target;
+            // Собираем данные формы
+            const urlEncoded = new URLSearchParams();
+            for (const pair of new FormData(form)) {
+                urlEncoded.append(pair[0], pair[1]);
+            }
+            try {
+                // Отправляем запрос в формате application/x-www-form-urlencoded для FastAPI Form(...)
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    body: urlEncoded,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+                const result = await response.json();
+                if (result.error) {
+                    alert(result.error);
+                } else if (result.ok) {
+                    if (endpoint === "/register") {
+                        alert("Регистрация успешна! Теперь вы можете войти.");
+                        toggleAuthWindows(false);
+                    } else if (endpoint === "/login") {
+                        currentUsername = result.username;
+                        initializeMessengerSession();
+                    }
+                }
+            } catch (err) {
+                alert("Ошибка соединения с сервером деплоя.");
+            }
+        }
 
-function appendSystemNotification(text) {
-const box = document.getElementById("chat-messages-box");
-const div = document.createElement("div");
-div.className = "system-msg";
-div.innerText = text;
-box.appendChild(div);
-box.scrollTop = box.scrollHeight;
-}
-function sendMessageToServer() {
-const input = document.getElementById("message-text-input");
-const text = input.value.strip ? input.value.strip() : input.value.trim();
-if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-ws.send(JSON.stringify({ type: "text", text: text }));
-input.value = "";
-}
-function handleInputFieldKeyPress(event) {
-if (event.key === "Enter") {
-sendMessageToServer();
-}
-}
-function switchActiveChatRoom(roomId, roomName) {
-if (!ws || ws.readyState !== WebSocket.OPEN) return;
-currentRoomId = roomId;
-ws.send(JSON.stringify({ type: "join_room", room_id: roomId }));
-// Визуально переключаем активные классы элементов меню
-document.querySelectorAll(".list-item").forEach(el => el.classList.remove("active"));
-const activeEl = document.getElementById(item-${roomId});
-if (activeEl) activeEl.classList.add("active");
-}
-function createNewRoom() {
-const name = prompt("Введите название новой комнаты:");
-if (!name || !ws || ws.readyState !== WebSocket.OPEN) return;
-ws.send(JSON.stringify({ type: "create_room", name: name }));
-}
-function renderSidebarElements(roomsList, onlineUsers) {
-const roomsBox = document.getElementById("rooms-list-container");
-roomsBox.innerHTML = <div id="item-general" class="list-item active" onclick="switchActiveChatRoom('general', 'Общий чат')"><span># Общий чат</span></div>;
-roomsList.forEach(r => {
-if (r.id !== "general") addRoomToSidebarList(r.id, r.name);
-});
-updateUsersOnlineList(onlineUsers);
-}
-function addRoomToSidebarList(id, name) {
-const roomsBox = document.getElementById("rooms-list-container");
-if (document.getElementById(item-${id})) return;
-const div = document.createElement("div");
-div.id = item-${id};
-div.className = "list-item";
-div.onclick = () => switchActiveChatRoom(id, name);
-div.innerHTML = <span># ${escapeHtml(name)}</span>;
-roomsBox.appendChild(div);
-}
-function updateUsersOnlineList(users) {
-const dmsBox = document.getElementById("dms-list-container");
-dmsBox.innerHTML = "";
-users.forEach(user => {
-if (user === currentUsername) return;
-const dmRoomId = currentUsername < user ? dm_${currentUsername}_${user} : dm_${user}_${currentUsername};
-const div = document.createElement("div");
-div.id = item-${dmRoomId};
-div.className = "list-item";
-div.onclick = () => switchActiveChatRoom(dmRoomId, user);
-div.innerHTML = <span>👤 ${escapeHtml(user)}</span> <span class="online-badge"></span>;
-dmsBox.appendChild(div);
-});
-}
-function jsonParseSafe(data) {
-try { return JSON.parse(data); }
-catch(e) { return null; }
-}
-function escapeHtml(str) {
-if (!str) return "";
-return str.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """).replace(/'/g, "'");
-}
+        function initializeMessengerSession() {
+            document.getElementById("login-window").classList.add("hidden");
+            document.getElementById("register-window").classList.add("hidden");
+            document.getElementById("app-container").style.display = "block";
+            document.getElementById("my-name-display").innerText = `👤 ${currentUsername}`;
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/${currentUsername}`);
+            ws.onmessage = function(event) {
+                const packet = jsonParseSafe(event.data);
+                if (!packet) return;
+                switch(packet.type) {
+                    case "init":
+                        renderSidebarElements(packet.rooms || [], packet.online_users || []);
+                        if (packet.last_room) {
+                            switchActiveChatRoom(packet.last_room, packet.last_room);
+                        } else {
+                            switchActiveChatRoom("general", "Общий чат");
+                        }
+                        break;
+                    case "online_update":
+                        updateUsersOnlineList(packet.online_users || []);
+                        break;
+                    case "room_joined":
+                        if (packet.name && !String(packet.name).startsWith("dm_")) {
+                            document.getElementById("current-chat-title").innerText = packet.name;
+                        }
+                        document.getElementById("chat-messages-box").innerHTML = "";
+                        break;
+                    case "history":
+                        appendMessageToBox(packet.data || packet, true);
+                        break;
+                    case "message": {
+                        const mData = packet.data || packet;
+                        if (mData.room_id === currentRoomId) {
+                            appendMessageToBox(mData, false);
+                        }
+                        break;
+                    }
+                    case "system":
+                        appendSystemNotification(packet.text);
+                        break;
+                    case "room_created":
+                        addRoomToSidebarList(packet.room_id, packet.name);
+                        break;
+                }
+            };
+            ws.onclose = function() {
+                appendSystemNotification("🔴 Соединение разорвано. Переподключение через 5 секунд...");
+                setTimeout(initializeMessengerSession, 5000);
+            };
+        }
+
+        function appendMessageToBox(msg, isHistory) {
+            const box = document.getElementById("chat-messages-box");
+            if (!msg) return;
+            const isOutgoing = msg.sender === currentUsername;
+            const wrapper = document.createElement("div");
+            wrapper.className = `msg-wrapper ${isOutgoing ? 'outgoing' : 'incoming'}`;
+            const rawTimestamp = msg.timestamp || msg.time;
+            let displayTime = "00:00";
+            if (rawTimestamp) {
+                let cleanTimestamp = String(rawTimestamp);
+                if (cleanTimestamp.includes('.')) {
+                    cleanTimestamp = cleanTimestamp.split('.')[0] + 'Z';
+                }
+                const dateObj = new Date(cleanTimestamp);
+                if (!isNaN(dateObj.getTime())) {
+                    displayTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                } else {
+                    displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            } else {
+                displayTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            wrapper.innerHTML = `
+                <div class="msg-bubble">
+                    <div class="msg-sender">${escapeHtml(msg.sender || "")}</div>
+                    <div class="msg-text">${escapeHtml(msg.text || "")}</div>
+                    <div class="msg-meta">
+                        <span>${displayTime}</span>
+                    </div>
+                </div>`;
+            box.appendChild(wrapper);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function appendSystemNotification(text) {
+            const box = document.getElementById("chat-messages-box");
+            const div = document.createElement("div");
+            div.className = "system-msg";
+            div.innerText = text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendMessageToServer() {
+            const input = document.getElementById("message-text-input");
+            const text = input.value.trim();
+            if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "text", text: text }));
+            input.value = "";
+        }
+
+        function handleInputFieldKeyPress(event) {
+            if (event.key === "Enter") {
+                sendMessageToServer();
+            }
+        }
+
+        function switchActiveChatRoom(roomId, roomName) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            currentRoomId = roomId;
+            ws.send(JSON.stringify({ type: "join_room", room_id: roomId }));
+            document.querySelectorAll(".list-item").forEach(el => el.classList.remove("active"));
+            const activeEl = document.getElementById(`item-${roomId}`);
+            if (activeEl) activeEl.classList.add("active");
+            document.getElementById("current-chat-title").innerText = roomName || roomId;
+        }
+
+        function createNewRoom() {
+            const name = prompt("Введите название новой комнаты:");
+            if (!name || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: "create_room", name: name }));
+        }
+
+        function renderSidebarElements(roomsList, onlineUsers) {
+            const roomsBox = document.getElementById("rooms-list-container");
+            roomsBox.innerHTML = `<div id="item-general" class="list-item active" onclick="switchActiveChatRoom('general', 'Общий чат')"><span># Общий чат</span></div>`;
+            (roomsList || []).forEach(r => {
+                if (r.id !== "general") addRoomToSidebarList(r.id, r.name);
+            });
+            updateUsersOnlineList(onlineUsers || []);
+        }
+
+        function addRoomToSidebarList(id, name) {
+            const roomsBox = document.getElementById("rooms-list-container");
+            if (document.getElementById(`item-${id}`)) return;
+            const div = document.createElement("div");
+            div.id = `item-${id}`;
+            div.className = "list-item";
+            div.onclick = () => switchActiveChatRoom(id, name);
+            div.innerHTML = `<span># ${escapeHtml(name)}</span>`;
+            roomsBox.appendChild(div);
+        }
+
+        function updateUsersOnlineList(users) {
+            const dmsBox = document.getElementById("dms-list-container");
+            dmsBox.innerHTML = "";
+            (users || []).forEach(user => {
+                if (user === currentUsername) return;
+                const dmRoomId = currentUsername < user ? `dm_${currentUsername}_${user}` : `dm_${user}_${currentUsername}`;
+                const div = document.createElement("div");
+                div.id = `item-${dmRoomId}`;
+                div.className = "list-item";
+                div.onclick = () => switchActiveChatRoom(dmRoomId, user);
+                div.innerHTML = `<span>👤 ${escapeHtml(user)}</span> <span class="online-badge"></span>`;
+                dmsBox.appendChild(div);
+            });
+        }
+
+        function jsonParseSafe(data) {
+            try { return JSON.parse(data); }
+            catch(e) { return null; }
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+    </script>
+</body>
+</html>
